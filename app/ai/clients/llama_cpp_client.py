@@ -1,3 +1,4 @@
+import os
 from app.ai.clients.base_openai_client import OpenAIClient
 
 
@@ -22,8 +23,9 @@ class LlamaCppClient(OpenAIClient):
     def get_base_url(self) -> str:
         """
         Returns the base URL for the Llama.cpp server.
+        Reads from LLAMA_CPP_BASE_URL environment variable, falls back to localhost.
         """
-        return "http://host.docker.internal:11434/v1/"
+        return os.getenv("LLAMA_CPP_BASE_URL", "http://127.0.0.1:11434/v1")
 
 
     def get_api_key_env_var(self) -> str:
