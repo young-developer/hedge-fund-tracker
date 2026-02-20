@@ -72,6 +72,55 @@ cp .env.example .env
 pipenv run python -m app.main
 ```
 
+## 🌐 Running the API and UI
+
+### Manual Execution
+
+**Run the API:**
+```bash
+pipenv run uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+**Run the UI:**
+```bash
+# Install UI dependencies first
+cd ui
+npm install
+# Or if using pipenv
+pipenv run npm install
+
+# Start the development server
+npm run dev
+```
+
+The UI will be available at `http://localhost:5173` and will automatically connect to the API at `http://localhost:8000`.
+
+### Using Docker Compose
+
+A complete setup with both API and UI can be run using Docker Compose:
+
+```bash
+# Build and start all services
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop services
+docker-compose down
+```
+
+**Services:**
+- **API**: Available at `http://localhost:8000`
+  - API documentation: `http://localhost:8000/docs`
+  - Health check: `http://localhost:8000/health`
+- **UI**: Available at `http://localhost:5173`
+
+**Configuration:**
+- Both services read from the `.env` file for API keys and configuration
+- The API and UI share the `./database` directory for data persistence
+- The API container has health checks to ensure proper startup
+
 ## ✨ Key Features
 
 | Feature | Description |
