@@ -8,6 +8,10 @@ import os
 import pandas as pd
 import re
 import time
+import json
+from datetime import datetime
+import uuid
+from typing import Any
 
 DB_FOLDER = './database'
 HEDGE_FUNDS_FILE = 'hedge_funds.csv'
@@ -830,3 +834,197 @@ def get_funds_missing_quarters() -> dict[str, list[str]]:
             missing_data_funds[fund_name] = missing
 
     return missing_data_funds
+
+
+REPORT_FOLDER = './reports'
+
+def create_report_folder():
+    """Create reports folder if it doesn't exist."""
+    Path(REPORT_FOLDER).mkdir(exist_ok=True)
+    Path(REPORT_FOLDER + '/ai_analyst').mkdir(exist_ok=True)
+    Path(REPORT_FOLDER + '/ai_due_diligence').mkdir(exist_ok=True)
+
+
+def save_ai_analyst_report(quarter: str, model_id: str, top_stocks: list[dict[str, Any]]) -> str:
+    """Save AI analyst report to JSON file.
+
+    Args:
+        quarter: Quarter in YYYYQN format
+        model_id: AI model ID used
+        top_stocks: List of top stocks with scores
+
+    Returns:
+        str: Report ID of the saved report
+    """
+    try:
+        create_report_folder()
+        report_id = str(uuid.uuid4())
+        timestamp = datetime.now().isoformat()
+        
+        metadata = {
+            'report_id': report_id,
+            'type': 'ai_analyst',
+            'quarter': quarter,
+            'model_id': model_id,
+            'generated_at': timestamp
+        }
+        
+        report_data = {
+            'metadata': metadata,
+            'top_stocks': top_stocks
+        }
+        
+        filename = f"{report_id}.json"
+        filepath = Path(REPORT_FOLDER) / 'ai_analyst' / filename
+        
+        with open(filepath, 'w') as f:
+            json.dump(report_data, f, indent=2)
+        
+        return report_id
+    except Exception as e:
+        print(f"Warning: Failed to save AI analyst report: {e}")
+        return ""
+
+
+def save_ai_due_diligence_report(ticker: str, quarter: str, model_id: str, 
+                                 stock_analysis: dict[str, Any]) -> str:
+    """Save AI due diligence report to JSON file.
+
+    Args:
+        ticker: Stock ticker
+        quarter: Quarter in YYYYQN format
+        model_id: AI model ID used
+        stock_analysis: Stock analysis data
+
+    Returns:
+        str: Report ID of the saved report
+    """
+    try:
+        create_report_folder()
+        report_id = str(uuid.uuid4())
+        timestamp = datetime.now().isoformat()
+        
+        metadata = {
+            'report_id': report_id,
+            'type': 'ai_due_diligence',
+            'ticker': ticker,
+            'quarter': quarter,
+            'model_id': model_id,
+            'generated_at': timestamp
+        }
+        
+        report_data = {
+            'metadata': metadata,
+            'stock_analysis': stock_analysis
+        }
+        
+        filename = f"{report_id}.json"
+        filepath = Path(REPORT_FOLDER) / 'ai_due_diligence' / filename
+        
+        with open(filepath, 'w') as f:
+            json.dump(report_data, f, indent=2)
+        
+        return report_id
+    except Exception as e:
+        print(f"Warning: Failed to save AI due diligence report: {e}")
+        return ""
+
+
+def get_all_reports(report_type: str) -> list[dict[str, Any]]:
+    """Get all reports of a specific type.
+
+    Args:
+        report_type: 'ai_analyst' or 'ai_due_diligence'
+
+    Returns:
+        list: List of report metadata dictionaries
+    """
+    try:
+        folder_path = Path(REPORT_FOLDER) / report_type
+        if not folder_path.exists():
+            return []
+        
+        reports = []
+        for filepath in folder_path.glob('*.json'):
+            try:
+                with open(filepath, 'r') as f:
+                    report_data = json.load(f)
+                    if 'metadata' in report_data:
+                        reports.append(report_data['metadata'])
+            except Exception as e:
+                print(f"Warning: Failed to read report {filepath}: {e}")
+                continue
+        
+        return sorted(reports, key=lambda x: x.get('generated_at', ''), reverse=True)
+    except Exception as e:
+        print(f"Warning: Failed to get reports: {e}")
+        return []
+
+
+def get_report_by_id(report_type: str, report_id: str) -> dict[str, Any] | None:
+    """Get a specific report by ID.
+
+    Args:
+        report_type: 'ai_analyst' or 'ai_due_diligence'
+        report_id: Report ID
+
+    Returns:
+        dict: Report data or None if not found
+    """
+    try:
+        folder_path = Path(REPORT_FOLDER) / report_type
+        filepath = folder_path / f"{report_id}.json"
+        
+        if not filepath.exists():
+            return None
+        
+        with open(filepath, 'r') as f:
+            return json.load(f)
+    except Exception as e:
+        print(f"Warning: Failed to get report: {e}")
+        return None
+
+
+def get_last_report(report_type: str) -> dict[str, Any] | None:
+    """Get the most recent report of a specific type.
+
+    Args:
+        report_type: 'ai_analyst' or 'ai_due_diligence'
+
+    Returns:
+        dict: Report data or None if no reports exist
+    """
+    try:
+        reports = get_all_reports(report_type)
+        if not reports:
+            return None
+        
+        latest_report_id = reports[0]['report_id']
+        return get_report_by_id(report_type, latest_report_id)
+    except Exception as e:
+        print(f"Warning: Failed to get last report: {e}")
+        return None
+
+
+def delete_report(report_type: str, report_id: str) -> bool:
+    """Delete a specific report.
+
+    Args:
+        report_type: 'ai_analyst' or 'ai_due_diligence'
+        report_id: Report ID
+
+    Returns:
+        bool: True if deleted successfully, False otherwise
+    """
+    try:
+        folder_path = Path(REPORT_FOLDER) / report_type
+        filepath = folder_path / f"{report_id}.json"
+        
+        if filepath.exists():
+            filepath.unlink()
+            return True
+        
+        return False
+    except Exception as e:
+        print(f"Warning: Failed to delete report: {e}")
+        return False
