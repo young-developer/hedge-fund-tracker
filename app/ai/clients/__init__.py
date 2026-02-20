@@ -11,6 +11,7 @@ from app.ai.clients.google_client import GoogleAIClient
 from app.ai.clients.huggingface_client import HuggingFaceClient
 from app.ai.clients.groq_client import GroqClient
 from app.ai.clients.openrouter_client import OpenRouterClient
+from app.ai.clients.llama_cpp_client import LlamaCppClient
 
 # Defines the public API of this package
-__all__ = ["AIClient", "GitHubClient", "OpenAIClient", "GoogleAIClient", "GroqClient", "HuggingFaceClient", "OpenRouterClient"]
+__all__ = ["AIClient", "GitHubClient", "OpenAIClient", "GoogleAIClient", "GroqClient", "HuggingFaceClient", "OpenRouterClient", "LlamaCppClient"]

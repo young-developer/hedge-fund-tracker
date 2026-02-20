@@ -191,6 +191,7 @@ The tool can utilize API keys for enhanced functionality, but all are optional:
 | **[![Groq AI](https://github.com/user-attachments/assets/c56394b5-79f8-4c25-a24a-2e2a8bde829c)](https://console.groq.com/) [Groq AI](https://console.groq.com/)** | Access to various LLMs (e.g., OpenAI [gpt-oss](https://github.com/openai/gpt-oss), Meta [Llama](https://www.llama.com/), etc...) | [Groq Keys](https://console.groq.com/keys) |
 | **[![Hugging Face](https://github.com/user-attachments/assets/b4f22e8b-6c6e-4e28-91ca-e2bc9b89837f)](https://huggingface.co/) [Hugging Face](https://huggingface.co/)** | Access to open weights models (e.g., [DeepSeek R1](https://huggingface.co/deepseek-ai/DeepSeek-R1), [Kimi-Linear-48B](https://huggingface.co/moonshotai/Kimi-Linear-48B-A3B-Instruct), etc...) | [HF Tokens](https://huggingface.co/settings/tokens) |
 | **[![OpenRouter](https://github.com/user-attachments/assets/0aae7c70-d6ab-4166-8052-d4b9e06b9bb3)](https://openrouter.ai/) [OpenRouter](https://openrouter.ai/)** | Access to various LLMs (e.g., [Claude 4.5 Opus](https://www.anthropic.com/news/claude-4-5-opus), [GLM 4.5 Air](https://chatglm.cn/), etc...) | [OpenRouter Keys](https://openrouter.ai/settings/keys) |
+| **[![Llama.cpp](https://github.com/ggerganov/llama.cpp)](https://github.com/ggerganov/llama.cpp) [Llama.cpp](https://github.com/ggerganov/llama.cpp)** | Run models locally via Ollama server (e.g., [GLM 4.7](https://huggingface.co/unsloth/GLM-4.7-Flash-GGUF)) | Install llamacpp locally |
 
 > **💡 Note:** Ticker resolution primarily uses [yfinance](https://github.com/ranaroussi/yfinance), which is free and requires no API key. If that fails, the system falls back to [Finnhub](https://finnhub.io/) (if an API key is provided), with the final fallback being [FinanceDatabase](https://github.com/JerBouma/FinanceDatabase/).
 >
@@ -371,6 +372,8 @@ The models included in `database/models.csv` have been selected because they hav
 > **💡 Note** on [xAI's Grok-3](https://x.ai/blog/grok-3): This tool now supports [GitHub Models](https://github.com/marketplace/models), which provides access to **Grok-3** and other next-generation models like **GPT-5** and **Llama 4**. This integration allows for state-of-the-art financial reasoning and due diligence directly through your GitHub account.
 >
 > **💡 Note** on [OpenRouter](https://openrouter.ai/): OpenRouter was initially included because it offered free access to top-tier models; while some are no longer free, you can still use it with this tool if you have an existing API key.
+>
+> **💡 Note** on [Llama.cpp](https://github.com/ggerganov/llama.cpp): This tool includes a `LlamaCppClient` for running models locally via the OpenAI-compatible API. This allows you to use models without internet access or API costs, making it ideal for offline analysis or experimentation with custom models.
 
 ### Adding Custom AI Models
 

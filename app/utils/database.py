@@ -1,4 +1,5 @@
-from app.ai.clients import GitHubClient, GoogleAIClient, GroqClient, HuggingFaceClient, OpenRouterClient
+from app.ai.clients import GitHubClient, GoogleAIClient, GroqClient, \
+    HuggingFaceClient, OpenRouterClient, LlamaCppClient
 from app.utils.strings import get_quarter
 from contextlib import contextmanager
 from pathlib import Path
@@ -21,7 +22,7 @@ def get_all_quarters() -> list[str]:
     """
     Returns a sorted (descending order) list of all quarter directories (e.g., '2025Q1')
     found in the specified database folder.
-    
+
     Returns:
         list: A list of strings, each representing a quarter directory name.
     """
@@ -88,14 +89,14 @@ def get_quarters_for_fund(fund_name: str) -> list[str]:
 def get_most_recent_quarter(ticker: str) -> str | None:
     """
     Finds the most recent quarter (within the last two available) for which a given ticker has data.
- 
+
     This function iterates through the last two available quarters in descending order.
     It checks all filing files in each quarter to see if any of them contain the given ticker.
     If not found, it checks the most recent non-quarterly filings (13D/G, Form 4) for IPOs.
- 
+
     Args:
         ticker (str): The stock ticker to search for.
- 
+
     Returns:
         str | None: The most recent quarter string (e.g., '2025Q1'), or None if no recent data is found for the ticker.
     """
@@ -105,7 +106,7 @@ def get_most_recent_quarter(ticker: str) -> str | None:
             for chunk in pd.read_csv(file_path, usecols=['Ticker'], dtype={'Ticker': str}, chunksize=10000):
                 if ticker in chunk['Ticker'].values:
                     return quarter
-                
+
     # Check non-quarterly data for IPOs or recent additions
     non_quarterly = load_non_quarterly_data()
     if not non_quarterly.empty and ticker in non_quarterly['Ticker'].values:
@@ -167,7 +168,7 @@ def load_fund_holdings(fund: str, quarter: str) -> pd.DataFrame:
         pd.DataFrame: A cleaned DataFrame with numeric 'Shares', 'Value', and 'Reported_Price'.
     """
     from app.utils.pd import get_numeric_series
-    
+
     df = load_fund_data(fund, quarter)
     if df.empty:
         return df
@@ -176,13 +177,13 @@ def load_fund_holdings(fund: str, quarter: str) -> pd.DataFrame:
     df['Shares'] = pd.to_numeric(df['Shares'], errors='coerce').fillna(0)
     if 'Value' in df.columns:
         df['Value'] = get_numeric_series(df['Value']).fillna(0)
-    
+
     # Calculate price per share from the report
     df['Reported_Price'] = df.apply(
         lambda r: r['Value'] / r['Shares'] if r['Shares'] > 0 else 0,
         axis=1
     )
-    
+
     return df
 
 
@@ -211,6 +212,7 @@ def load_models(filepath=f"./{DB_FOLDER}/{MODELS_FILE}") -> list:
         "Groq": GroqClient,
         "HuggingFace": HuggingFaceClient,
         "OpenRouter": OpenRouterClient,
+        "LlamaCpp": LlamaCppClient,
     }
     try:
         df = pd.read_csv(filepath, keep_default_na=False)
@@ -348,7 +350,7 @@ def stocks_lock(timeout=30):
     lock_path = Path(DB_FOLDER) / f"{STOCKS_FILE}.lock"
     start_time = time.time()
     acquired = False
-    
+
     try:
         while True:
             try:
@@ -360,7 +362,7 @@ def stocks_lock(timeout=30):
             except FileExistsError:
                 if time.time() - start_time > timeout:
                     raise TimeoutError(f"Could not acquire lock for {STOCKS_FILE} within {timeout} seconds.")
-                
+
                 # Check for stale lock (older than 60 seconds)
                 try:
                     if time.time() - os.path.getmtime(lock_path) > 60:
@@ -371,12 +373,12 @@ def stocks_lock(timeout=30):
                             pass
                 except OSError:
                     pass
-                    
+
                 time.sleep(0.05)
             except OSError:
                 # Handle potential permission errors or other weird OS-level issues
                 time.sleep(0.05)
-                
+
         yield
     finally:
         if acquired:
@@ -391,7 +393,7 @@ def save_stock(cusip: str, ticker: str, company: str) -> None:
 
     This function appends a new row while ensuring no duplicates are created.
     It uses a lock and then re-checks if the CUSIP exists (Double-Checked Locking).
-    
+
     Args:
         cusip (str): The CUSIP identifier of the stock.
         ticker (str): The stock ticker symbol.
@@ -450,7 +452,7 @@ def clean_stocks(filepath=f'./database/{STOCKS_FILE}') -> None:
 
         # Isolate orphan CUSIPs that belong to these tickers
         final_orphans_df = stocks_df[
-            (stocks_df['CUSIP'].isin(orphan_cusips)) & 
+            (stocks_df['CUSIP'].isin(orphan_cusips)) &
             (stocks_df['Ticker'].isin(tickers_with_multiple_cusips))
         ]
 
@@ -499,20 +501,20 @@ def sort_stocks(filepath=f'./database/{STOCKS_FILE}') -> None:
 def find_cusips_for_ticker(old_ticker: str) -> list[dict[str, str]]:
     """
     Finds all CUSIPs associated with a given ticker in the stocks.csv file.
-    
+
     Args:
         old_ticker (str): The ticker to search for.
-        
+
     Returns:
         list: A list of dictionaries containing CUSIP, Ticker, and Company information.
     """
     stocks_path = Path(DB_FOLDER) / STOCKS_FILE
     matching_stocks = []
-    
+
     if not stocks_path.exists():
         print(f"❌ Error: {STOCKS_FILE} not found at {stocks_path}")
         return matching_stocks
-    
+
     with open(stocks_path, 'r', encoding='utf-8', newline='') as f:
         reader = csv.DictReader(f)
         for row in reader:
@@ -522,95 +524,95 @@ def find_cusips_for_ticker(old_ticker: str) -> list[dict[str, str]]:
                     'Ticker': row['Ticker'],
                     'Company': row['Company']
                 })
-    
+
     return matching_stocks
 
 
 def update_stocks_csv(old_ticker: str, new_ticker: str) -> int:
     """
     Updates the ticker in stocks.csv for all matching CUSIPs.
-    
+
     Args:
         old_ticker (str): The current ticker to replace.
         new_ticker (str): The new ticker to use.
-        
+
     Returns:
         int: The number of rows updated.
     """
     stocks_path = Path(DB_FOLDER) / STOCKS_FILE
-    
+
     if not stocks_path.exists():
         print(f"❌ Error: {STOCKS_FILE} not found")
         return 0
-    
+
     # Read all rows
     rows = []
     updated_count = 0
-    
+
     with open(stocks_path, 'r', encoding='utf-8', newline='') as f:
         reader = csv.DictReader(f)
         fieldnames = reader.fieldnames
-        
+
         for row in reader:
             if row['Ticker'] == old_ticker:
                 row['Ticker'] = new_ticker
                 updated_count += 1
             rows.append(row)
-    
+
     # Write back
     with stocks_lock():
         with open(stocks_path, 'w', encoding='utf-8', newline='') as f:
             writer = csv.DictWriter(f, fieldnames=fieldnames, quoting=csv.QUOTE_ALL)
             writer.writeheader()
             writer.writerows(rows)
-    
+
     return updated_count
 
 
 def update_quarterly_filings(cusips: list[str], new_ticker: str) -> None:
     """
     Updates the ticker in all quarterly filing CSV files for the specified CUSIPs.
-    
+
     Args:
         cusips (list): List of CUSIPs to update.
         new_ticker (str): The new ticker to use.
     """
     quarters = get_all_quarters()
-    
+
     for quarter in quarters:
         quarter_path = Path(DB_FOLDER) / quarter
-        
+
         if not quarter_path.exists():
             continue
-        
+
         csv_files = list(quarter_path.glob('*.csv'))
-        
+
         for csv_file in csv_files:
             try:
                 rows = []
                 file_updated = False
-                
+
                 with open(csv_file, 'r', encoding='utf-8', newline='') as f:
                     reader = csv.DictReader(f)
                     fieldnames = reader.fieldnames
-                    
+
                     if 'CUSIP' not in fieldnames or 'Ticker' not in fieldnames:
                         continue
-                    
+
                     for row in reader:
                         if row['CUSIP'] in cusips:
                             row['Ticker'] = new_ticker
                             file_updated = True
                         rows.append(row)
-                
+
                 if file_updated:
                     with open(csv_file, 'w', encoding='utf-8', newline='') as f:
                         writer = csv.DictWriter(f, fieldnames=fieldnames)
                         writer.writeheader()
                         writer.writerows(rows)
-                    
+
                     print(f"✅ Updated {quarter}/{csv_file.name}")
-                    
+
             except Exception as e:
                 print(f"❌ Error processing {csv_file}: {e}")
 
@@ -618,74 +620,74 @@ def update_quarterly_filings(cusips: list[str], new_ticker: str) -> None:
 def update_non_quarterly_filings(cusips: list[str], new_ticker: str) -> int:
     """
     Updates the ticker in the non_quarterly.csv file for the specified CUSIPs.
-    
+
     Args:
         cusips (list): List of CUSIPs to update.
         new_ticker (str): The new ticker to use.
-        
+
     Returns:
         int: Number of rows updated.
     """
     nq_path = Path(DB_FOLDER) / LATEST_SCHEDULE_FILINGS_FILE
-    
+
     rows = []
     updated_count = 0
-    
+
     try:
         with open(nq_path, 'r', encoding='utf-8', newline='') as f:
             reader = csv.DictReader(f)
             fieldnames = reader.fieldnames
-            
+
             for row in reader:
                 if row['CUSIP'] in cusips:
                     row['Ticker'] = new_ticker
                     updated_count += 1
                 rows.append(row)
-        
+
         with open(nq_path, 'w', encoding='utf-8', newline='') as f:
             writer = csv.DictWriter(f, fieldnames=fieldnames, quoting=csv.QUOTE_ALL)
             writer.writeheader()
             writer.writerows(rows)
-        
+
         if updated_count > 0:
             print(f"✅ Updated {updated_count} row(s) in {LATEST_SCHEDULE_FILINGS_FILE}")
-            
+
     except Exception as e:
         print(f"❌ Error processing {LATEST_SCHEDULE_FILINGS_FILE}: {e}")
         return 0
-    
+
     return updated_count
 
 
 def update_ticker_for_cusip(cusip: str, new_ticker: str) -> None:
     """
     Updates the ticker for a single CUSIP across the entire database.
-    
+
     This function:
     1. Updates the ticker for the specified CUSIP in stocks.csv
     2. Updates all quarterly filings for that CUSIP
     3. Updates the non_quarterly.csv file
-    
+
     Args:
         cusip (str): The CUSIP to update.
         new_ticker (str): The new ticker to use.
     """
     stocks_path = Path(DB_FOLDER) / STOCKS_FILE
-    
+
     if not stocks_path.exists():
         print(f"❌ Error: {STOCKS_FILE} not found")
         return
-    
+
     # Update stocks.csv
     rows = []
     found = False
     old_ticker = None
     company = None
-    
+
     with open(stocks_path, 'r', encoding='utf-8', newline='') as f:
         reader = csv.DictReader(f)
         fieldnames = reader.fieldnames
-        
+
         for row in reader:
             if row['CUSIP'] == cusip:
                 old_ticker = row['Ticker']
@@ -693,20 +695,20 @@ def update_ticker_for_cusip(cusip: str, new_ticker: str) -> None:
                 row['Ticker'] = new_ticker
                 found = True
             rows.append(row)
-    
+
     if not found:
         print(f"❌ CUSIP '{cusip}' not found in {STOCKS_FILE}")
         return
-    
+
     print(f"  - CUSIP: {cusip}, Company: {company}, Old Ticker: {old_ticker} → New Ticker: {new_ticker}")
-    
+
     # Write back stocks.csv
     with stocks_lock():
         with open(stocks_path, 'w', encoding='utf-8', newline='') as f:
             writer = csv.DictWriter(f, fieldnames=fieldnames, quoting=csv.QUOTE_ALL)
             writer.writeheader()
             writer.writerows(rows)
-    
+
     # Update quarterly filings and non-quarterly filings
     update_quarterly_filings([cusip], new_ticker)
     update_non_quarterly_filings([cusip], new_ticker)
@@ -715,28 +717,28 @@ def update_ticker_for_cusip(cusip: str, new_ticker: str) -> None:
 def update_ticker(old_ticker: str, new_ticker: str) -> None:
     """
     Updates a ticker across the entire database.
-    
+
     This function:
     1. Finds all CUSIPs associated with the old ticker in stocks.csv
     2. Updates the ticker in stocks.csv
     3. Updates all quarterly filings for those CUSIPs
     4. Updates the non_quarterly.csv file
-    
+
     Args:
         old_ticker (str): The current ticker to replace.
         new_ticker (str): The new ticker to use.
     """
     matching_stocks = find_cusips_for_ticker(old_ticker)
-    
+
     if not matching_stocks:
         print(f"❌ No stocks found with ticker '{old_ticker}'")
         return
-    
+
     for stock in matching_stocks:
         print(f"  - CUSIP: {stock['CUSIP']}, Company: {stock['Company']}")
-    
+
     cusips = [stock['CUSIP'] for stock in matching_stocks]
-    
+
     update_stocks_csv(old_ticker, new_ticker)
     update_quarterly_filings(cusips, new_ticker)
     update_non_quarterly_filings(cusips, new_ticker)
@@ -745,11 +747,11 @@ def update_ticker(old_ticker: str, new_ticker: str) -> None:
 def delete_fund_from_database(fund_info: dict, url: str = "") -> None:
     """
     Deletes a hedge fund from the database.
-    
+
     This function:
     1. Removes all quarterly filing files for the fund.
     2. Moves the fund record from hedge_funds.csv to excluded_hedge_funds.csv with the provided URL.
-    
+
     Args:
         fund_info (dict): A dictionary containing fund information ('Fund', 'CIK', etc.)
         url (str): The website URL of the fund.
@@ -779,17 +781,17 @@ def delete_fund_from_database(fund_info: dict, url: str = "") -> None:
     try:
         # Load all hedge funds
         df_hedge_funds = pd.read_csv(hedge_funds_path, dtype=str, keep_default_na=False)
-        
+
         # Find the record to move
         record_to_move = df_hedge_funds[df_hedge_funds['Fund'] == fund_name]
-        
+
         if record_to_move.empty:
             print(f"❌ Fund '{fund_name}' not found in {HEDGE_FUNDS_FILE}")
         else:
             # Prepare record for excluded_hedge_funds.csv
             excluded_record = record_to_move.copy()
             excluded_record['URL'] = url
-            
+
             # Append to excluded_hedge_funds.csv
             if excluded_path.exists():
                 excluded_record.to_csv(excluded_path, mode='a', header=False, index=False, quoting=csv.QUOTE_ALL)
@@ -822,7 +824,7 @@ def get_funds_missing_quarters() -> dict[str, list[str]]:
     for fund in funds:
         fund_name = fund['Fund']
         fund_quarters = set(get_quarters_for_fund(fund_name))
-        
+
         if fund_quarters != all_quarters:
             missing = sorted(list(all_quarters - fund_quarters))
             missing_data_funds[fund_name] = missing
