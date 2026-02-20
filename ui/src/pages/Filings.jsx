@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { getRecentFilings } from '../api/filings'
 import { Clock, AlertCircle, DollarSign, Share2, TrendingUp, TrendingDown } from 'lucide-react'
+import LoadingSpinner from '../components/LoadingSpinner'
 
 export default function Filings() {
   const [filings, setFilings] = useState({ data: { recent_filings: [] } })
@@ -23,9 +24,7 @@ export default function Filings() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
+      <LoadingSpinner message="Loading filings..." />
     )
   }
 

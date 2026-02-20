@@ -1,12 +1,24 @@
 import { useEffect, useState } from 'react'
-import { getAIModels, runAIAnalyst } from '../api/ai'
+import { getAIModels, runAIAnalyst, getAIAnalystReports, getAIAnalystReport } from '../api/ai'
 import { getQuarters, getLastQuarter } from '../api/analysis'
 import Card from '../components/Card'
 import LoadingSpinner from '../components/LoadingSpinner'
 import ErrorBoundary from '../components/ErrorBoundary'
 import { formatCurrency, formatPercentage } from '../services/api'
-import { TrendingUp, Sparkles, AlertCircle } from 'lucide-react'
+import { TrendingUp, Sparkles, AlertCircle, Clock, FileText, Trash2, CheckCircle } from 'lucide-react'
 import TickerLogo from '../components/TickerLogo'
+import { Table } from 'antd'
+
+const STORAGE_KEY = 'ai-analyst-selected-model'
+
+const saveSelectedModel = (modelId) => {
+  localStorage.setItem(STORAGE_KEY, modelId)
+}
+
+const loadSelectedModel = () => {
+  const savedModel = localStorage.getItem(STORAGE_KEY)
+  return savedModel
+}
 
 export default function AIAnalyst() {
   const [models, setModels] = useState([])
@@ -17,6 +29,9 @@ export default function AIAnalyst() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [generating, setGenerating] = useState(false)
+  const [reports, setReports] = useState([])
+  const [loadingReports, setLoadingReports] = useState(false)
+  const [selectedReport, setSelectedReport] = useState(null)
 
   useEffect(() => {
     async function fetchData() {
@@ -37,11 +52,13 @@ export default function AIAnalyst() {
         }
 
         if (modelsData.data && modelsData.data.length > 0) {
-          setSelectedModel(modelsData.data[0].ID)
+          const savedModel = loadSelectedModel()
+          const defaultModel = modelsData.data[0].ID
+          setSelectedModel(savedModel || defaultModel)
         }
 
-        if (lastQuarterData.data) {
-          setSelectedQuarter(lastQuarterData.data)
+        if (lastQuarterData.data && lastQuarterData.data.quarter) {
+          setSelectedQuarter(lastQuarterData.data.quarter)
         }
       } catch (err) {
         setError(err.message || 'Failed to load data')
@@ -51,6 +68,31 @@ export default function AIAnalyst() {
     }
 
     fetchData()
+  }, [])
+
+  useEffect(() => {
+    if (selectedModel) {
+      saveSelectedModel(selectedModel)
+    }
+  }, [selectedModel])
+
+  useEffect(() => {
+    async function fetchReports() {
+      try {
+        setLoadingReports(true)
+        setError('')
+        const response = await getAIAnalystReports()
+        if (response.data && response.data.length > 0) {
+          setReports(response.data)
+        }
+      } catch (err) {
+        setError(err.message || 'Failed to load reports')
+      } finally {
+        setLoadingReports(false)
+      }
+    }
+
+    fetchReports()
   }, [])
 
   async function handleGenerateAnalysis() {
@@ -69,8 +111,8 @@ export default function AIAnalyst() {
         model_id: selectedModel
       })
 
-      if (response.data && response.data.scored_list) {
-        setRankedStocks(response.data.scored_list)
+      if (response.data) {
+        setRankedStocks(response.data)
       } else {
         setError(response.error || 'Failed to generate analysis')
       }
@@ -78,6 +120,25 @@ export default function AIAnalyst() {
       setError(err.message || 'Failed to generate AI analysis')
     } finally {
       setGenerating(false)
+    }
+  }
+
+  async function handleLoadReport(report) {
+    try {
+      setLoading(true)
+      setError('')
+      setSelectedReport(report)
+
+      const response = await getAIAnalystReport(report.report_id)
+      if (response.data && response.data.top_stocks) {
+        setRankedStocks(response.data.top_stocks)
+      } else {
+        setError(response.error || 'Failed to load report')
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to load report')
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -111,6 +172,14 @@ export default function AIAnalyst() {
     )
   }
 
+  if (loadingReports && !reports.length) {
+    return (
+      <ErrorBoundary>
+        <LoadingSpinner message="Loading reports..." />
+      </ErrorBoundary>
+    )
+  }
+
   return (
     <ErrorBoundary>
       <div className="space-y-6">
@@ -118,6 +187,42 @@ export default function AIAnalyst() {
           <h2 className="text-2xl font-bold text-gray-900">AI Analyst</h2>
           <p className="mt-2 text-gray-600">Generate AI-powered ranked list of promising stocks</p>
         </div>
+
+        {reports.length > 0 && (
+          <Card>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold flex items-center">
+                <FileText className="mr-2 h-5 w-5 text-purple-600" />
+                Previous Reports
+              </h3>
+              <span className="text-sm text-gray-500">{reports.length} reports</span>
+            </div>
+            <div className="space-y-3 max-h-64 overflow-y-auto">
+              {reports.map((report) => (
+                <div
+                  key={report.report_id}
+                  className={`border rounded-lg p-4 hover:bg-gray-50 cursor-pointer transition-colors ${
+                    selectedReport?.report_id === report.report_id ? 'bg-purple-50 border-purple-300' : 'border-gray-200'
+                  }`}
+                  onClick={() => handleLoadReport(report)}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <Clock className="h-4 w-4 text-gray-400" />
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">{report.quarter}</p>
+                        <p className="text-xs text-gray-500">{report.model_id}</p>
+                      </div>
+                    </div>
+                    <span className="text-xs text-gray-400">
+                      {new Date(report.generated_at).toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
 
         <Card>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -176,84 +281,105 @@ export default function AIAnalyst() {
 
         {rankedStocks.length > 0 && (
           <Card>
-            <h3 className="text-lg font-semibold mb-4 flex items-center">
-              <TrendingUp className="mr-2 h-5 w-5 text-purple-600" />
-              Top {rankedStocks.length} Promising Stocks
-            </h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold flex items-center">
+                <TrendingUp className="mr-2 h-5 w-5 text-purple-600" />
+                Top {rankedStocks.length} Promising Stocks
+              </h3>
+              {selectedReport && (
+                <div className="flex items-center gap-2 text-sm text-green-600">
+                  <CheckCircle className="h-4 w-4" />
+                  <span>Report saved</span>
+                </div>
+              )}
+            </div>
             <p className="text-sm text-gray-500 mb-4">
               Ranked by AI analysis based on hedge fund activity
             </p>
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                      Rank
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                      Ticker
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                      Company
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                      Industry
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                      Promise
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                      Risk
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                      Volatility
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                      Momentum
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                      Growth
-                    </th>
-                  </tr>
-                </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {rankedStocks.map((stock, index) => (
-                      <tr key={stock.ticker} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                          {index + 1}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center gap-2">
-                            <TickerLogo ticker={stock.ticker} />
-                            <span className="text-sm font-bold text-gray-900">{stock.ticker}</span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 text-sm text-gray-500">
-                          {stock.company}
-                        </td>
-                        <td className="px-6 py-4 text-sm text-gray-500">
-                          {stock.industry}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm">
-                          {formatPercentage(stock.promise_score, 2)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm">
-                          {formatPercentage(stock.risk_score, 2)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm">
-                          {formatPercentage(stock.low_volatility_score, 2)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm">
-                          {formatPercentage(stock.momentum_score, 2)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm">
-                          {formatPercentage(stock.growth_score, 2)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-              </table>
-            </div>
+            <Table
+              columns={[
+                {
+                  title: 'Rank',
+                  dataIndex: 'rank',
+                  key: 'rank',
+                  width: 80,
+                  fixed: 'left',
+                  render: (text, record, index) => index + 1
+                },
+                {
+                  title: 'Ticker',
+                  dataIndex: 'ticker',
+                  key: 'ticker',
+                  width: 120,
+                  fixed: 'left',
+                  render: (ticker, record) => (
+                    <div className="flex items-center gap-2">
+                      <TickerLogo ticker={ticker} />
+                      <span className="text-sm font-bold text-gray-900">{ticker}</span>
+                    </div>
+                  )
+                },
+                {
+                  title: 'Company',
+                  dataIndex: 'company',
+                  key: 'company',
+                  width: 200
+                },
+                {
+                  title: 'Industry',
+                  dataIndex: 'industry',
+                  key: 'industry',
+                  width: 150
+                },
+                {
+                  title: 'Promise',
+                  dataIndex: 'promise_score',
+                  key: 'promise_score',
+                  width: 100,
+                  sorter: (a, b) => a.promise_score - b.promise_score,
+                  render: (value) => typeof value === 'number' ? value.toFixed(2) : value
+                },
+                {
+                  title: 'Risk',
+                  dataIndex: 'risk_score',
+                  key: 'risk_score',
+                  width: 100,
+                  sorter: (a, b) => a.risk_score - b.risk_score
+                },
+                {
+                  title: 'Volatility',
+                  dataIndex: 'low_volatility_score',
+                  key: 'low_volatility_score',
+                  width: 100,
+                  sorter: (a, b) => a.low_volatility_score - b.low_volatility_score
+                },
+                {
+                  title: 'Momentum',
+                  dataIndex: 'momentum_score',
+                  key: 'momentum_score',
+                  width: 100,
+                  sorter: (a, b) => a.momentum_score - b.momentum_score
+                },
+                {
+                  title: 'Growth',
+                  dataIndex: 'growth_score',
+                  key: 'growth_score',
+                  width: 100,
+                  sorter: (a, b) => a.growth_score - b.growth_score
+                }
+              ]}
+              dataSource={rankedStocks}
+              rowKey="ticker"
+              pagination={{
+                pageSize: 10,
+                showSizeChanger: false,
+                showTotal: (total) => `Showing ${total} stocks`,
+                position: ['bottomCenter']
+              }}
+              scroll={{ x: 1000 }}
+              size="small"
+              bordered
+            />
           </Card>
         )}
       </div>

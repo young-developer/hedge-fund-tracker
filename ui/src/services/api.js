@@ -29,9 +29,6 @@ api.interceptors.response.use(
   }
 )
 
-// Log intercepted requests for debugging
-console.log('API Interceptor configured')
-
 
 export const handleApiError = (error) => {
   if (error.response) {
@@ -83,7 +80,11 @@ export const formatPercentage = (value, decimals = 2) => {
   } else if (absValue === 0) {
     return '0'
   } else {
-    return (value * 100).toFixed(decimals) + '%'
+    // Check if value is already in percentage format (greater than 1)
+    // The backend stores percentages as raw numbers (e.g., 12.3 for 12.3%)
+    // So we need to divide by 100 before multiplying by 100
+    const displayValue = absValue > 1 ? value / 100 : value
+    return (displayValue * 100).toFixed(decimals) + '%'
   }
 }
 

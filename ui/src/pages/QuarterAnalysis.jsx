@@ -13,6 +13,7 @@ import TickerLogo from '../components/TickerLogo'
 import Card from '../components/Card'
 import {Table as AntdTable, Tabs} from 'antd'
 import {formatValue, formatPercentage, formatPrice} from '../utils/format'
+import LoadingSpinner from '../components/LoadingSpinner'
 
 export default function QuarterAnalysis() {
   const [quarters, setQuarters] = useState([])
@@ -372,10 +373,7 @@ export default function QuarterAnalysis() {
 
         {/* Loading State */}
         {loading && (
-            <div className="flex items-center justify-center h-64">
-              <div
-                  className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-            </div>
+            <LoadingSpinner message="Analyzing market data..." />
         )}
 
          {/* Analysis Results */}

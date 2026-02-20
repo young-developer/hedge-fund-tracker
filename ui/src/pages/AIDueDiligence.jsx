@@ -1,13 +1,24 @@
 import { useEffect, useState } from 'react'
-import { getAIModels, runAIDueDiligence } from '../api/ai'
+import { getAIModels, runAIDueDiligence, getAIDueDiligenceReports, getAIDueDiligenceReport } from '../api/ai'
 import { searchStocks, getStockHoldings } from '../api/stocks'
 import { getQuarters, getLastQuarter } from '../api/analysis'
 import Card from '../components/Card'
 import LoadingSpinner from '../components/LoadingSpinner'
 import ErrorBoundary from '../components/ErrorBoundary'
 import { formatCurrency, formatPercentage, formatDate } from '../services/api'
-import { Search, Sparkles, AlertCircle, ArrowRight } from 'lucide-react'
+import { Search, Sparkles, AlertCircle, ArrowRight, Clock, FileText, CheckCircle } from 'lucide-react'
 import TickerLogo from '../components/TickerLogo'
+
+const STORAGE_KEY = 'ai-due-diligence-selected-model'
+
+const saveSelectedModel = (modelId) => {
+  localStorage.setItem(STORAGE_KEY, modelId)
+}
+
+const loadSelectedModel = () => {
+  const savedModel = localStorage.getItem(STORAGE_KEY)
+  return savedModel
+}
 
 export default function AIDueDiligence() {
   const [models, setModels] = useState([])
@@ -21,6 +32,9 @@ export default function AIDueDiligence() {
   const [loading, setLoading] = useState(false)
   const [generating, setGenerating] = useState(false)
   const [error, setError] = useState('')
+  const [reports, setReports] = useState([])
+  const [loadingReports, setLoadingReports] = useState(false)
+  const [selectedReport, setSelectedReport] = useState(null)
 
   useEffect(() => {
     async function fetchData() {
@@ -41,11 +55,13 @@ export default function AIDueDiligence() {
         }
 
         if (modelsData.data && modelsData.data.length > 0) {
-          setSelectedModel(modelsData.data[0].ID)
+          const savedModel = loadSelectedModel()
+          const defaultModel = modelsData.data[0].ID
+          setSelectedModel(savedModel || defaultModel)
         }
 
-        if (lastQuarterData.data) {
-          setSelectedQuarter(lastQuarterData.data)
+        if (lastQuarterData.data && lastQuarterData.data.quarter) {
+          setSelectedQuarter(lastQuarterData.data.quarter)
         }
       } catch (err) {
         setError(err.message || 'Failed to load data')
@@ -55,6 +71,31 @@ export default function AIDueDiligence() {
     }
 
     fetchData()
+  }, [])
+
+  useEffect(() => {
+    if (selectedModel) {
+      saveSelectedModel(selectedModel)
+    }
+  }, [selectedModel])
+
+  useEffect(() => {
+    async function fetchReports() {
+      try {
+        setLoadingReports(true)
+        setError('')
+        const response = await getAIDueDiligenceReports()
+        if (response.data && response.data.length > 0) {
+          setReports(response.data)
+        }
+      } catch (err) {
+        setError(err.message || 'Failed to load reports')
+      } finally {
+        setLoadingReports(false)
+      }
+    }
+
+    fetchReports()
   }, [])
 
   async function handleSearch(query) {
@@ -108,6 +149,29 @@ export default function AIDueDiligence() {
     }
   }
 
+  async function handleLoadReport(report) {
+    try {
+      setLoading(true)
+      setError('')
+      setSelectedReport(report)
+
+      const response = await getAIDueDiligenceReport(report.report_id)
+      if (response.data && response.data.stock_analysis) {
+        setAnalysis(response.data.stock_analysis)
+        setSelectedStock({
+          ticker: response.data.stock_analysis.ticker,
+          company: response.data.stock_analysis.company
+        })
+      } else {
+        setError(response.error || 'Failed to load report')
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to load report')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   if (loading && !selectedStock) {
     return (
       <ErrorBoundary>
@@ -145,6 +209,42 @@ export default function AIDueDiligence() {
           <h2 className="text-2xl font-bold text-gray-900">AI Due Diligence</h2>
           <p className="mt-2 text-gray-600">Run detailed AI-powered analysis on individual stocks</p>
         </div>
+
+        {reports.length > 0 && (
+          <Card>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold flex items-center">
+                <FileText className="mr-2 h-5 w-5 text-purple-600" />
+                Previous Reports
+              </h3>
+              <span className="text-sm text-gray-500">{reports.length} reports</span>
+            </div>
+            <div className="space-y-3 max-h-64 overflow-y-auto">
+              {reports.map((report) => (
+                <div
+                  key={report.report_id}
+                  className={`border rounded-lg p-4 hover:bg-gray-50 cursor-pointer transition-colors ${
+                    selectedReport?.report_id === report.report_id ? 'bg-purple-50 border-purple-300' : 'border-gray-200'
+                  }`}
+                  onClick={() => handleLoadReport(report)}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <Clock className="h-4 w-4 text-gray-400" />
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">{report.ticker} - {report.quarter}</p>
+                        <p className="text-xs text-gray-500">{report.model_id}</p>
+                      </div>
+                    </div>
+                    <span className="text-xs text-gray-400">
+                      {new Date(report.generated_at).toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
 
         <Card>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -235,6 +335,13 @@ export default function AIDueDiligence() {
                 <Sparkles className="h-6 w-6" />
                 {generating ? 'Running AI Analysis...' : 'Generate Analysis'}
               </button>
+            </div>
+          )}
+
+          {analysis && selectedReport && (
+            <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2 text-green-700">
+              <CheckCircle className="h-5 w-5" />
+              <span className="font-medium">Report saved</span>
             </div>
           )}
         </Card>

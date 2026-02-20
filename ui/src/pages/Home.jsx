@@ -3,6 +3,7 @@ import { getQuarters } from '../api/analysis'
 import { getRecentFilings as getFilings } from '../api/filings'
 import { TrendingUp, FileText, Clock } from 'lucide-react'
 import TickerLogo from '../components/TickerLogo'
+import LoadingSpinner from '../components/LoadingSpinner'
 
 export default function Home() {
   const [quarters, setQuarters] = useState([])
@@ -30,9 +31,7 @@ export default function Home() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
+      <LoadingSpinner message="Loading dashboard..." />
     )
   }
 
