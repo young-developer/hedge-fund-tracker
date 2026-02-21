@@ -36,7 +36,7 @@ export default function FundAnalysis() {
         }
 
         if (lastQuarterData.data && fundsData.data && fundsData.data.length > 0) {
-          setSelectedQuarter(lastQuarterData.data)
+          setSelectedQuarter(lastQuarterData.data.quarter)
         }
       } catch (err) {
         setError(err.message || 'Failed to load funds data')

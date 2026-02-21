@@ -12,15 +12,15 @@ const api = axios.create({
 api.interceptors.response.use(
   (response) => {
     const data = response.data
+    console.log('API interceptor response:', data)
     // If response is an APIResponse wrapper and successful, return the entire response
     if (data && data.success) {
-      // Check if the data is a nested object with quarter key
-      if ('quarter' in data) {
-        return data.quarter
-      }
+      console.log('API response is successful')
       // Return the entire APIResponse object
+      console.log('Returning entire data object')
       return data
     }
+    console.log('API response is not successful, returning response.data')
     return response.data
   },
   (error) => {
