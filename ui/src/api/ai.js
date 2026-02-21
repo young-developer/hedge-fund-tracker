@@ -8,7 +8,7 @@ export const getAIModelInfo = (modelId) => api.get(`/api/ai/model/${modelId}`)
 
 export const getAIAnalystReports = () => api.get('/api/ai/reports/analyst')
 export const getAIAnalystReport = (reportId) => api.get(
-    `/api/ai/reports/analyst/${reportId}`)
+    `/api/ai/reports/analyst/${reportId}?t=${Date.now()}`)
 export const getAIAnalystReportsByQuarter = (quarter) => api.get(
     `/api/ai/reports/analyst/quarter/${quarter}`)
 export const getLastAIAnalystReport = () => api.get(

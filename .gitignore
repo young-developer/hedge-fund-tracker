@@ -1,6 +1,6 @@
 __llmcache__
 __pycache__
-reports
+__reports__
 .env
 .vscode
 gh-md-toc

@@ -1,8 +1,9 @@
 import {useEffect, useState} from 'react'
 import {getQuarters} from '../api/analysis'
 import {getRecentFilings as getFilings} from '../api/filings'
-import {getLatestAIAnalystReportData, getAIAnalystReportsByQuarter, getAIAnalystReport} from '../api/ai'
-import {TrendingUp, FileText, Clock, Brain, Calendar} from 'lucide-react'
+import {getAIAnalystReportsByQuarter, getAIAnalystReport} from '../api/ai'
+import {TrendingUp, FileText, Clock, Brain} from 'lucide-react'
+import {Select} from 'antd'
 import TickerLogo from '../components/TickerLogo'
 import AIReportTile from '../components/AIReportTile'
 import LoadingSpinner from '../components/LoadingSpinner'
@@ -16,6 +17,28 @@ export default function Home() {
   const [selectedReport, setSelectedReport] = useState(null)
   const [aiReport, setAiReport] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [reportLoading, setReportLoading] = useState(false)
+
+  async function loadReportData(reportId) {
+    if (!reportId) return
+
+    setReportLoading(true)
+    try {
+      console.log('Fetching report data for:', reportId)
+      const fullReport = await getAIAnalystReport(reportId)
+      console.log('Full report response:', fullReport)
+      if (fullReport && fullReport.data) {
+        console.log('Top stocks count:', fullReport.data.top_stocks?.length || 0)
+        setAiReport(fullReport.data)
+        console.log('Report data set successfully')
+        console.log('New report data:', fullReport.data)
+      }
+    } catch (error) {
+      console.error('Error fetching full report:', error)
+    } finally {
+      setReportLoading(false)
+    }
+  }
 
   useEffect(() => {
     let isMounted = true
@@ -29,7 +52,9 @@ export default function Home() {
           getFilings(30),
         ])
 
-        if (!isMounted) return
+        if (!isMounted) {
+          return
+        }
 
         setQuarters(quartersData.data || [])
         setFilings(filingsData.data || [])
@@ -37,36 +62,18 @@ export default function Home() {
         // Get latest quarter
         const latestQuarter = quartersData.data?.[0] || null
         if (latestQuarter) {
-          const quarterReports = await getAIAnalystReportsByQuarter(latestQuarter)
+          const quarterReports = await getAIAnalystReportsByQuarter(
+              latestQuarter)
 
-          if (!isMounted) return
+          if (!isMounted) {
+            return
+          }
 
           setAiReports(quarterReports.data || [])
 
           // Set the latest report as default
           if (quarterReports.data && quarterReports.data.length > 0) {
-            const reportId = quarterReports.data[0].report_id
-            setSelectedReport(quarterReports.data[0])
-            console.log('Fetching full report for ID:', reportId)
-
-            // Fetch full report data
-            try {
-              const fullReport = await getAIAnalystReport(reportId)
-              console.log('Full report response type:', typeof fullReport)
-              console.log('Full report keys:', fullReport ? Object.keys(fullReport) : 'null')
-              console.log('Full report success:', fullReport?.success)
-              console.log('Full report data:', fullReport?.data)
-
-              if (fullReport && fullReport.data) {
-                setAiReport(fullReport.data)
-                console.log('Successfully set aiReport with', fullReport.data.top_stocks?.length || 0, 'stocks')
-              } else {
-                console.error('Full report data is empty or invalid')
-                console.error('fullReport:', fullReport)
-              }
-            } catch (error) {
-              console.error('Error fetching full report:', error)
-            }
+            await loadReportData(quarterReports.data[0].report_id)
           }
         }
       } catch (error) {
@@ -145,38 +152,44 @@ export default function Home() {
                 <div className="p-2 bg-indigo-100 rounded-lg">
                   <Brain className="h-5 w-5 sm:h-6 sm:w-6 text-indigo-600"/>
                 </div>
-                 <div className="flex-1">
-                    <h2 className="text-lg sm:text-xl font-semibold">Latest AI
-                      Analyst Report</h2>
-                    <p className="text-xs sm:text-sm text-gray-500">
-                      {aiReport.metadata?.quarter
-                          || 'N/A'} • {aiReport.metadata?.model_id || 'N/A'} •
-                      {aiReport.metadata?.generated_at
-                          ? formatTimestamp(aiReport.metadata.generated_at)
-                          : 'N/A'}
-                    </p>
-                  </div>
+                <div className="flex-1">
+                  <h2 className="text-lg sm:text-xl font-semibold">Latest AI
+                    Analyst Report</h2>
+                  <p className="text-xs sm:text-sm text-gray-500">
+                    {aiReport.metadata?.quarter
+                        || 'N/A'} • {aiReport.metadata?.model_id || 'N/A'} •
+                    {aiReport.metadata?.generated_at
+                        ? formatTimestamp(aiReport.metadata.generated_at)
+                        : 'N/A'}
+                  </p>
+                </div>
                   {aiReports.length > 1 && !loading && (
-                    <select
-                      value={selectedReport?.metadata?.report_id || ''}
-                      onChange={(e) => {
-                        const report = aiReports.find(r => r.metadata.report_id === e.target.value)
-                        if (report) {
-                          setSelectedReport(report)
-                          setAiReport(report)
-                        }
-                      }}
-                      className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-300 rounded-lg text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
-                    >
-                      <Calendar className="h-4 w-4 text-gray-500"/>
-                      {aiReports.map((report) => (
-                        <option key={report.metadata.report_id} value={report.metadata.report_id}>
-                          {formatTimestamp(report.metadata.generated_at)}
-                        </option>
-                      ))}
-                    </select>
+                    <>
+                      <Select
+                        value={selectedReport?.report_id || undefined}
+                        onChange={async (reportId) => {
+                          const report = aiReports.find(r => r.report_id === reportId)
+                          if (report) {
+                            setSelectedReport(report)
+                            console.log('Selecting report:', reportId)
+                            console.log('Report details:', report)
+                            await loadReportData(reportId)
+                          }
+                        }}
+                        className="w-64"
+                        size="small"
+                        loading={reportLoading}
+                        options={aiReports
+                          .filter(report => report)
+                          .map(report => ({
+                            value: report.report_id,
+                            label: `${report.model_id} ${formatTimestamp(report.generated_at)}`
+                          }))}
+                        placeholder="Select report"
+                      />
+                    </>
                   )}
-               </div>
+              </div>
 
               <div
                   className="mb-2 sm:mb-3 flex flex-wrap gap-2 text-xs sm:text-sm">
@@ -194,21 +207,21 @@ export default function Home() {
 
               <div
                   className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-3">
-                {aiReport.top_stocks
-                    .sort((a, b) => {
-                      const colorPriority = { green: 0, yellow: 1, red: 2 }
-                      const aColor = getTileColor(a.promise_score, a.risk_score)
-                      const bColor = getTileColor(b.promise_score, b.risk_score)
+                {aiReport?.top_stocks?.length > 0 && aiReport.top_stocks
+                .sort((a, b) => {
+                  const colorPriority = {green: 0, yellow: 1, red: 2}
+                  const aColor = getTileColor(a.promise_score, a.risk_score)
+                  const bColor = getTileColor(b.promise_score, b.risk_score)
 
-                      if (colorPriority[aColor] !== colorPriority[bColor]) {
-                        return colorPriority[aColor] - colorPriority[bColor]
-                      }
+                  if (colorPriority[aColor] !== colorPriority[bColor]) {
+                    return colorPriority[aColor] - colorPriority[bColor]
+                  }
 
-                      return b.promise_score - a.promise_score
-                    })
-                    .map((stock) => (
-                        <AIReportTile key={stock.ticker} stock={stock}/>
-                    ))}
+                  return b.promise_score - a.promise_score
+                })
+                .map((stock) => (
+                    <AIReportTile key={stock.ticker} stock={stock}/>
+                ))}
               </div>
 
               <div className="mt-3 sm:mt-4 text-center">
