@@ -1028,3 +1028,123 @@ def delete_report(report_type: str, report_id: str) -> bool:
     except Exception as e:
         print(f"Warning: Failed to delete report: {e}")
         return False
+
+
+def load_all_stocks(filepath=f"./{DB_FOLDER}/{STOCKS_FILE}") -> pd.DataFrame:
+    """
+    Loads all stocks from the master stock file.
+
+    Args:
+        filepath (str, optional): Path to the CSV file.
+
+    Returns:
+        pd.DataFrame: DataFrame containing all stocks.
+    """
+    try:
+        df = pd.read_csv(filepath, dtype={'CUSIP': str, 'Ticker': str, 'Company': str}, keep_default_na=False)
+        return df
+    except Exception as e:
+        print(f"❌ Error while reading stocks from '{filepath}': {e}")
+        return pd.DataFrame()
+
+
+def get_excluded_hedge_funds(filepath=f"./{DB_FOLDER}/{EXCLUDED_HEDGE_FUNDS_FILE}") -> list:
+    """
+    Loads excluded hedge funds from file.
+
+    Args:
+        filepath (str, optional): Path to the CSV file.
+
+    Returns:
+        list: List of excluded fund information dictionaries.
+    """
+    try:
+        df = pd.read_csv(filepath, dtype={'CIK': str, 'Fund': str, 'Manager': str, 
+                                          'Denomination': str, 'CIKs': str, 'URL': str}, 
+                         keep_default_na=False)
+        return df.to_dict('records')
+    except Exception as e:
+        print(f"❌ Error while reading excluded hedge funds from '{filepath}': {e}")
+        return []
+
+
+def get_stock_by_cusip(cusip: str) -> dict | None:
+    """
+    Get a specific stock by CUSIP.
+
+    Args:
+        cusip (str): The CUSIP to search for.
+
+    Returns:
+        dict | None: Stock information dictionary or None if not found.
+    """
+    try:
+        stocks = load_all_stocks()
+        stock = stocks[stocks['CUSIP'] == cusip].to_dict('records')
+        return stock[0] if stock else None
+    except Exception as e:
+        print(f"❌ Error while searching stock by CUSIP: {e}")
+        return None
+
+
+def get_stock_by_ticker(ticker: str) -> dict | None:
+    """
+    Get a specific stock by ticker.
+
+    Args:
+        ticker (str): The ticker to search for.
+
+    Returns:
+        dict | None: Stock information dictionary or None if not found.
+    """
+    try:
+        stocks = load_all_stocks()
+        stock = stocks[stocks['Ticker'] == ticker].to_dict('records')
+        return stock[0] if stock else None
+    except Exception as e:
+        print(f"❌ Error while searching stock by ticker: {e}")
+        return None
+
+
+def get_fund_by_cik(cik: str, funds_type='active') -> dict | None:
+    """
+    Get a specific fund by CIK.
+
+    Args:
+        cik (str): The CIK to search for.
+        funds_type (str): 'active' for hedge_funds.csv, 'excluded' for excluded_hedge_funds.csv.
+
+    Returns:
+        dict | None: Fund information dictionary or None if not found.
+    """
+    try:
+        if funds_type == 'active':
+            funds = load_hedge_funds()
+            fund = [f for f in funds if f['CIK'] == cik]
+        else:
+            funds = get_excluded_hedge_funds()
+            fund = [f for f in funds if f['CIK'] == cik]
+        
+        return fund[0] if fund else None
+    except Exception as e:
+        print(f"❌ Error while searching fund by CIK: {e}")
+        return None
+
+
+def get_model_by_id(model_id: str) -> dict | None:
+    """
+    Get a specific AI model by ID.
+
+    Args:
+        model_id (str): The model ID to search for.
+
+    Returns:
+        dict | None: Model information dictionary or None if not found.
+    """
+    try:
+        models = load_models()
+        model = [m for m in models if m['ID'] == model_id]
+        return model[0] if model else None
+    except Exception as e:
+        print(f"❌ Error while searching model by ID: {e}")
+        return None

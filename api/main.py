@@ -4,7 +4,7 @@ FastAPI application for Hedge Fund Tracker API.
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from api.config import config
-from api.routes import health, funds, stocks, analysis, filings, ai
+from api.routes import health, funds, stocks, analysis, filings, ai, settings
 
 # Create FastAPI app
 app = FastAPI(
@@ -32,6 +32,7 @@ app.include_router(stocks.router)
 app.include_router(analysis.router)
 app.include_router(filings.router)
 app.include_router(ai.router)
+app.include_router(settings.router)
 
 
 @app.on_event("startup")
