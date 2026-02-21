@@ -930,6 +930,24 @@ def save_ai_due_diligence_report(ticker: str, quarter: str, model_id: str,
         return ""
 
 
+def sort_key(report: dict[str, Any]) -> tuple[int, int, str]:
+    """Sort key: quarter ascending, then timestamp descending.
+
+    Args:
+        report: Report metadata dictionary
+
+    Returns:
+        tuple: (year, quarter_number, timestamp) for sorting
+    """
+    quarter = report.get('quarter', '')
+    if quarter:
+        parts = quarter.split('Q')
+        year = int(parts[0])
+        quarter_num = int(parts[1])
+        return (year, quarter_num, report.get('generated_at', ''))
+    return (0, 0, report.get('generated_at', ''))
+
+
 def get_all_reports(report_type: str) -> list[dict[str, Any]]:
     """Get all reports of a specific type.
 
@@ -943,7 +961,7 @@ def get_all_reports(report_type: str) -> list[dict[str, Any]]:
         folder_path = Path(REPORT_FOLDER) / report_type
         if not folder_path.exists():
             return []
-        
+
         reports = []
         for filepath in folder_path.glob('*.json'):
             try:
@@ -954,8 +972,8 @@ def get_all_reports(report_type: str) -> list[dict[str, Any]]:
             except Exception as e:
                 print(f"Warning: Failed to read report {filepath}: {e}")
                 continue
-        
-        return sorted(reports, key=lambda x: x.get('generated_at', ''), reverse=True)
+
+        return sorted(reports, key=sort_key, reverse=True)
     except Exception as e:
         print(f"Warning: Failed to get reports: {e}")
         return []

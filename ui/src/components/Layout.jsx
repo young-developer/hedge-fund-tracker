@@ -127,7 +127,6 @@ export default function Layout() {
             breakpoint="lg"
             collapsedWidth="0"
             zeroWidthTriggerStyle={{ display: 'none' }}
-            width={240}
             className="bg-white shadow-md"
             style={{
               borderRight: '1px solid #f0f0f0',

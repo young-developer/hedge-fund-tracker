@@ -1,12 +1,13 @@
 import {useEffect, useState} from 'react'
 import {getQuarters} from '../api/analysis'
 import {getRecentFilings as getFilings} from '../api/filings'
-import {getLatestAIAnalystReportData} from '../api/ai-reports'
+import {getLatestAIAnalystReportData} from '../api/ai'
 import {TrendingUp, FileText, Clock, Brain} from 'lucide-react'
 import TickerLogo from '../components/TickerLogo'
 import AIReportTile from '../components/AIReportTile'
 import LoadingSpinner from '../components/LoadingSpinner'
 import {getTileColor} from '../utils/score-colors'
+import {formatTimestamp} from '../utils/format'
 
 export default function Home() {
   const [quarters, setQuarters] = useState([])
@@ -98,14 +99,17 @@ export default function Home() {
                 <div className="p-2 bg-indigo-100 rounded-lg">
                   <Brain className="h-5 w-5 sm:h-6 sm:w-6 text-indigo-600"/>
                 </div>
-                <div>
-                  <h2 className="text-lg sm:text-xl font-semibold">Latest AI
-                    Analyst Report</h2>
-                  <p className="text-xs sm:text-sm text-gray-500">
-                    {aiReport.metadata?.quarter
-                        || 'N/A'} • {aiReport.metadata?.model_id || 'N/A'}
-                  </p>
-                </div>
+                 <div>
+                   <h2 className="text-lg sm:text-xl font-semibold">Latest AI
+                     Analyst Report</h2>
+                   <p className="text-xs sm:text-sm text-gray-500">
+                     {aiReport.metadata?.quarter
+                         || 'N/A'} • {aiReport.metadata?.model_id || 'N/A'} •
+                     {aiReport.metadata?.generated_at
+                         ? formatTimestamp(aiReport.metadata.generated_at)
+                         : 'N/A'}
+                   </p>
+                 </div>
               </div>
 
               <div

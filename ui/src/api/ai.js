@@ -2,15 +2,21 @@ import api from '../services/api'
 
 export const getAIModels = () => api.get('/api/ai/models')
 export const runAIAnalyst = (request) => api.post('/api/ai/analyst', request)
-export const runAIDueDiligence = (request) => api.post('/api/ai/due-diligence', request)
+export const runAIDueDiligence = (request) => api.post('/api/ai/due-diligence',
+    request)
 export const getAIModelInfo = (modelId) => api.get(`/api/ai/model/${modelId}`)
 
 export const getAIAnalystReports = () => api.get('/api/ai/reports/analyst')
-export const getAIAnalystReport = (reportId) => api.get(`/api/ai/reports/analyst/${reportId}`)
-export const getLastAIAnalystReport = () => api.get('/api/ai/reports/analyst/latest')
-export const getAIDueDiligenceReports = () => api.get('/api/ai/reports/due-diligence')
-export const getAIDueDiligenceReport = (reportId) => api.get(`/api/ai/reports/due-diligence/${reportId}`)
-export const getLastAIDueDiligenceReport = () => api.get('/api/ai/reports/due-diligence/latest')
+export const getAIAnalystReport = (reportId) => api.get(
+    `/api/ai/reports/analyst/${reportId}`)
+export const getLastAIAnalystReport = () => api.get(
+    '/api/ai/reports/analyst/latest')
+export const getAIDueDiligenceReports = () => api.get(
+    '/api/ai/reports/due-diligence')
+export const getAIDueDiligenceReport = (reportId) => api.get(
+    `/api/ai/reports/due-diligence/${reportId}`)
+export const getLastAIDueDiligenceReport = () => api.get(
+    '/api/ai/reports/due-diligence/latest')
 
 export const getAIReports = () => Promise.all([
   getAIAnalystReports(),
@@ -19,3 +25,13 @@ export const getAIReports = () => Promise.all([
   analyst: analystReports.data || [],
   dueDiligence: dueDiligenceReports.data || []
 }))
+
+export const getLatestAIAnalystReportData = async () => {
+  try {
+    const response = await getLastAIAnalystReport()
+    return response.data || response
+  } catch (error) {
+    console.error('Error fetching latest AI analyst report:', error)
+    return null
+  }
+}
