@@ -1,13 +1,13 @@
-import { useEffect, useState } from 'react'
-import { getAIModels, runAIAnalyst, getAIAnalystReports, getAIAnalystReport } from '../api/ai'
-import { getQuarters, getLastQuarter } from '../api/analysis'
-import Card from '../components/Card'
-import LoadingSpinner from '../components/LoadingSpinner'
-import ErrorBoundary from '../components/ErrorBoundary'
-import { formatCurrency, formatPercentage } from '../services/api'
-import { TrendingUp, Sparkles, AlertCircle, Clock, FileText, Trash2, CheckCircle } from 'lucide-react'
-import TickerLogo from '../components/TickerLogo'
-import { Table } from 'antd'
+ import { useEffect, useState, useMemo } from 'react'
+ import { getAIModels, runAIAnalyst, getAIAnalystReports, getAIAnalystReport } from '../api/ai'
+ import { getQuarters, getLastQuarter } from '../api/analysis'
+ import Card from '../components/Card'
+ import LoadingSpinner from '../components/LoadingSpinner'
+ import ErrorBoundary from '../components/ErrorBoundary'
+ import { formatCurrency, formatPercentage } from '../services/api'
+ import { TrendingUp, Sparkles, AlertCircle, Clock, FileText, Trash2, CheckCircle } from 'lucide-react'
+ import TickerLogo from '../components/TickerLogo'
+ import { Table } from 'antd'
 
 const STORAGE_KEY = 'ai-analyst-selected-model'
 
@@ -29,9 +29,10 @@ export default function AIAnalyst() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [generating, setGenerating] = useState(false)
-  const [reports, setReports] = useState([])
-  const [loadingReports, setLoadingReports] = useState(false)
-  const [selectedReport, setSelectedReport] = useState(null)
+   const [reports, setReports] = useState([])
+   const [loadingReports, setLoadingReports] = useState(false)
+   const [selectedReport, setSelectedReport] = useState(null)
+   const [selectedQuarterFilter, setSelectedQuarterFilter] = useState('all')
 
   useEffect(() => {
     async function fetchData() {
@@ -76,24 +77,46 @@ export default function AIAnalyst() {
     }
   }, [selectedModel])
 
-  useEffect(() => {
-    async function fetchReports() {
-      try {
-        setLoadingReports(true)
-        setError('')
-        const response = await getAIAnalystReports()
-        if (response.data && response.data.length > 0) {
-          setReports(response.data)
-        }
-      } catch (err) {
-        setError(err.message || 'Failed to load reports')
-      } finally {
-        setLoadingReports(false)
-      }
-    }
+   useEffect(() => {
+     async function fetchReports() {
+       try {
+         setLoadingReports(true)
+         setError('')
+         const response = await getAIAnalystReports()
+         if (response.data && response.data.length > 0) {
+           setReports(response.data)
+         }
+       } catch (err) {
+         setError(err.message || 'Failed to load reports')
+       } finally {
+         setLoadingReports(false)
+       }
+     }
 
-    fetchReports()
-  }, [])
+     fetchReports()
+   }, [])
+
+   const uniqueQuarters = useMemo(() => {
+     return [...new Set(reports.map(report => report.quarter))].sort().reverse()
+   }, [reports])
+
+   const filteredReportsByQuarter = useMemo(() => {
+     if (selectedQuarterFilter === 'all') {
+       return reports
+     }
+     return reports.filter(report => report.quarter === selectedQuarterFilter)
+   }, [reports, selectedQuarterFilter])
+
+   const groupedReports = useMemo(() => {
+     return filteredReportsByQuarter.reduce((groups, report) => {
+       const quarter = report.quarter
+       if (!groups[quarter]) {
+         groups[quarter] = []
+       }
+       groups[quarter].push(report)
+       return groups
+     }, {})
+   }, [filteredReportsByQuarter])
 
   async function handleGenerateAnalysis() {
     if (!selectedQuarter || !selectedModel) {
@@ -188,41 +211,62 @@ export default function AIAnalyst() {
           <p className="mt-2 text-gray-600">Generate AI-powered ranked list of promising stocks</p>
         </div>
 
-        {reports.length > 0 && (
-          <Card>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold flex items-center">
-                <FileText className="mr-2 h-5 w-5 text-purple-600" />
-                Previous Reports
-              </h3>
-              <span className="text-sm text-gray-500">{reports.length} reports</span>
-            </div>
-            <div className="space-y-3 max-h-64 overflow-y-auto">
-              {reports.map((report) => (
-                <div
-                  key={report.report_id}
-                  className={`border rounded-lg p-4 hover:bg-gray-50 cursor-pointer transition-colors ${
-                    selectedReport?.report_id === report.report_id ? 'bg-purple-50 border-purple-300' : 'border-gray-200'
-                  }`}
-                  onClick={() => handleLoadReport(report)}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <Clock className="h-4 w-4 text-gray-400" />
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">{report.quarter}</p>
-                        <p className="text-xs text-gray-500">{report.model_id}</p>
-                      </div>
-                    </div>
-                    <span className="text-xs text-gray-400">
-                      {new Date(report.generated_at).toLocaleString()}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </Card>
-        )}
+         {reports.length > 0 && (
+           <Card>
+             <div className="flex items-center justify-between mb-4">
+               <h3 className="text-lg font-semibold flex items-center">
+                 <FileText className="mr-2 h-5 w-5 text-purple-600" />
+                 Previous Reports
+               </h3>
+               <span className="text-sm text-gray-500">{reports.length} reports</span>
+             </div>
+             <div className="mb-4">
+               <select
+                 value={selectedQuarterFilter}
+                 onChange={(e) => setSelectedQuarterFilter(e.target.value)}
+                 className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+               >
+                 <option value="all">All Quarters</option>
+                 {uniqueQuarters.map((quarter) => (
+                   <option key={quarter} value={quarter}>
+                     {quarter}
+                   </option>
+                 ))}
+               </select>
+             </div>
+             <div className="space-y-3 max-h-64 overflow-y-auto">
+               {Object.entries(groupedReports).map(([quarter, quarterReports]) => (
+                 <div key={quarter}>
+                   <div className="text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide px-1">
+                     {quarter}
+                   </div>
+                   {quarterReports.map((report) => (
+                     <div
+                       key={report.report_id}
+                       className={`border rounded-lg p-3 hover:bg-gray-50 cursor-pointer transition-colors ${
+                         selectedReport?.report_id === report.report_id ? 'bg-purple-50 border-purple-300' : 'border-gray-200'
+                       }`}
+                       onClick={() => handleLoadReport(report)}
+                     >
+                       <div className="flex items-center justify-between">
+                         <div className="flex items-center gap-2">
+                           <Clock className="h-4 w-4 text-gray-400" />
+                           <div>
+                             <p className="text-sm font-medium text-gray-900">{report.quarter}</p>
+                             <p className="text-xs text-gray-500">{report.model_id}</p>
+                           </div>
+                         </div>
+                         <span className="text-xs text-gray-400">
+                           {new Date(report.generated_at).toLocaleString()}
+                         </span>
+                       </div>
+                     </div>
+                   ))}
+                 </div>
+               ))}
+             </div>
+           </Card>
+         )}
 
         <Card>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
