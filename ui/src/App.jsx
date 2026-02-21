@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import {BrowserRouter as Router, Routes, Route} from 'react-router-dom'
 import Layout from './components/Layout'
 import Home from './pages/Home'
 import QuarterAnalysis from './pages/QuarterAnalysis'
@@ -11,20 +11,20 @@ import Settings from './pages/Settings'
 
 function App() {
   return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<Layout />}>
-          <Route index element={<Home />} />
-          <Route path="quarters" element={<QuarterAnalysis />} />
-          <Route path="funds" element={<FundAnalysis />} />
-          <Route path="stocks" element={<StockAnalysis />} />
-          <Route path="filings" element={<Filings />} />
-          <Route path="ai-analyst" element={<AIAnalyst />} />
-          <Route path="ai-due-diligence" element={<AIDueDiligence />} />
-          <Route path="settings" element={<Settings />} />
-        </Route>
-      </Routes>
-    </Router>
+      <Router>
+        <Routes>
+          <Route path="/" element={<Layout/>}>
+            <Route index element={<Home/>}/>
+            <Route path="quarters" element={<QuarterAnalysis/>}/>
+            <Route path="funds" element={<FundAnalysis/>}/>
+            <Route path="stocks" element={<StockAnalysis/>}/>
+            <Route path="filings" element={<Filings/>}/>
+            <Route path="ai-analyst" element={<AIAnalyst/>}/>
+            <Route path="ai-due-diligence" element={<AIDueDiligence/>}/>
+            <Route path="settings" element={<Settings/>}/>
+          </Route>
+        </Routes>
+      </Router>
   )
 }
 
