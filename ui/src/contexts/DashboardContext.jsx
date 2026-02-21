@@ -7,6 +7,7 @@ export function DashboardProvider({ children }) {
     availableQuarters: 0,
     recentFilings: 0,
     lastUpdated: 'N/A',
+    lastDatabaseUpdate: null,
   })
   const [loading, setLoading] = useState(true)
 
@@ -44,8 +45,15 @@ export function DashboardProvider({ children }) {
     setLoading(false)
   }
 
+  const updateLastDatabaseUpdate = (timestamp) => {
+    setDashboardData(prev => ({
+      ...prev,
+      lastDatabaseUpdate: timestamp,
+    }))
+  }
+
   return (
-    <DashboardContext.Provider value={{ dashboardData, loading, updateDashboardData, updateQuarters, updateRecentFilings }}>
+    <DashboardContext.Provider value={{ dashboardData, loading, updateDashboardData, updateQuarters, updateRecentFilings, updateLastDatabaseUpdate }}>
       {children}
     </DashboardContext.Provider>
   )
