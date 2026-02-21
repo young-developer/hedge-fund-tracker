@@ -103,6 +103,40 @@ async def search_stocks(query: str, search_field: str = "ticker"):
         )
 
 
+@router.get("/stocks/bulk-search", response_model=APIResponse)
+async def search_stocks_bulk(query: str, search_field: str = "ticker"):
+    """Search stocks by ticker, company, or CUSIP pattern."""
+    try:
+        if not query:
+            return APIResponse(
+                success=False,
+                error="Query parameter is required",
+                message="Missing required parameter: query"
+            )
+
+        if search_field not in ["ticker", "company", "cusip"]:
+            return APIResponse(
+                success=False,
+                error="Invalid search field",
+                message="Valid search fields are: ticker, company, cusip"
+            )
+
+        stocks = SettingsService.search_stocks_pattern(query, search_field)
+
+        return APIResponse(
+            success=True,
+            data=stocks,
+            message=f"Found {len(stocks)} stocks matching '{query}'"
+        )
+    except Exception as e:
+        logger.error(f"Failed to search stocks: {e}", exc_info=True)
+        return APIResponse(
+            success=False,
+            error=str(e),
+            message="Failed to search stocks"
+        )
+
+
 @router.get("/stocks/{ticker}", response_model=APIResponse)
 async def get_stock_by_ticker_route(ticker: str):
     """Get a specific stock by ticker."""

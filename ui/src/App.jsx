@@ -7,6 +7,7 @@ import StockAnalysis from './pages/StockAnalysis'
 import AIAnalyst from './pages/AIAnalyst'
 import AIDueDiligence from './pages/AIDueDiligence'
 import Filings from './pages/Filings'
+import Settings from './pages/Settings'
 
 function App() {
   return (
@@ -20,6 +21,7 @@ function App() {
           <Route path="filings" element={<Filings />} />
           <Route path="ai-analyst" element={<AIAnalyst />} />
           <Route path="ai-due-diligence" element={<AIDueDiligence />} />
+          <Route path="settings" element={<Settings />} />
         </Route>
       </Routes>
     </Router>

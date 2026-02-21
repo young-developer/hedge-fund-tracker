@@ -1148,3 +1148,34 @@ def get_model_by_id(model_id: str) -> dict | None:
     except Exception as e:
         print(f"❌ Error while searching model by ID: {e}")
         return None
+
+
+def search_stocks_pattern(query: str, search_field: str = "ticker") -> list[dict]:
+    """
+    Search stocks by pattern in ticker, company, or CUSIP.
+
+    Args:
+        query (str): The search query (substring to match)
+        search_field (str): The field to search ('ticker', 'company', or 'cusip')
+
+    Returns:
+        list: List of matching stock dictionaries
+    """
+    try:
+        stocks = load_all_stocks()
+        query_lower = query.lower()
+
+        if search_field == "ticker":
+            stocks = stocks[stocks['Ticker'].str.lower().str.contains(query_lower)]
+        elif search_field == "company":
+            stocks = stocks[stocks['Company'].str.lower().str.contains(query_lower)]
+        elif search_field == "cusip":
+            stocks = stocks[stocks['CUSIP'].str.lower().str.contains(query_lower)]
+        else:
+            return []
+
+        return stocks.to_dict('records')
+
+    except Exception as e:
+        print(f"❌ Error while searching stocks by pattern: {e}")
+        return []

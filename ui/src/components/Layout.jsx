@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Outlet, Link, useLocation } from 'react-router-dom'
-import { LayoutDashboard, BarChart3, Building2, TrendingUp, FileText, Brain, Sparkles, Search, Menu, X } from 'lucide-react'
+import { LayoutDashboard, BarChart3, Building2, TrendingUp, FileText, Brain, Sparkles, Search, Menu, X, Settings as SettingsIcon } from 'lucide-react'
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
@@ -10,6 +10,7 @@ const navigation = [
   { name: 'Filings', href: '/filings', icon: FileText },
   { name: 'AI Analyst', href: '/ai-analyst', icon: Sparkles },
   { name: 'AI Due Diligence', href: '/ai-due-diligence', icon: Search },
+  { name: 'Settings', href: '/settings', icon: SettingsIcon },
 ]
 
 export default function Layout() {

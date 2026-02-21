@@ -79,6 +79,29 @@ class SettingsService:
             return None
 
     @staticmethod
+    def search_stocks_pattern(query: str, search_field: str = "ticker") -> list[dict[str, Any]]:
+        """
+        Search stocks by pattern in ticker, company, or CUSIP.
+
+        Args:
+            query (str): The search query (substring to match)
+            search_field (str): The field to search ('ticker', 'company', or 'cusip')
+
+        Returns:
+            list: List of matching stock dictionaries
+        """
+        from app.utils.database import search_stocks_pattern
+
+        try:
+            logger.info(f"Searching for stocks by pattern: {query} in field: {search_field}")
+            stocks = search_stocks_pattern(query, search_field)
+            logger.info(f"Found {len(stocks)} stocks matching '{query}'")
+            return stocks
+        except Exception as e:
+            logger.error(f"Failed to search stocks by pattern: {e}", exc_info=True)
+            return []
+
+    @staticmethod
     def get_all_hedge_funds() -> list[dict[str, Any]]:
         """
         Get all tracked hedge funds.
