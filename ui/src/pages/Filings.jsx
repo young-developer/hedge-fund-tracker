@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react'
 import { getRecentFilings } from '../api/filings'
 import { Clock, AlertCircle, DollarSign, Share2, TrendingUp, TrendingDown } from 'lucide-react'
 import LoadingSpinner from '../components/LoadingSpinner'
+import { useDashboard } from '../contexts'
 
 export default function Filings() {
+  const { updateRecentFilings } = useDashboard()
   const [filings, setFilings] = useState({ data: { recent_filings: [] } })
   const [loading, setLoading] = useState(true)
 
@@ -12,6 +14,7 @@ export default function Filings() {
       try {
         const response = await getRecentFilings(90)
         setFilings(response)
+        updateRecentFilings(response)
       } catch (error) {
         console.error('Error fetching filings:', error)
       } finally {

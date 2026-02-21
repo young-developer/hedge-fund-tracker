@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { Layout as AntdLayout, Menu, Button, Drawer, ConfigProvider, theme } from 'antd'
+import { Layout as AntdLayout, Menu, Button, Drawer, ConfigProvider, theme, Typography } from 'antd'
 import {
   LayoutDashboard,
   BarChart3,
@@ -9,10 +9,13 @@ import {
   FileText,
   Settings,
   Sparkles,
-  Search
+  Search,
+  BarChart
 } from 'lucide-react'
+import {useDashboard} from '../contexts'
 
 const { Header, Sider, Content } = AntdLayout
+const { Text } = Typography
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
@@ -29,6 +32,7 @@ export default function Layout() {
   const location = useLocation()
   const navigate = useNavigate()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const {dashboardData} = useDashboard()
 
   const MenuIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -66,13 +70,13 @@ export default function Layout() {
       <AntdLayout className="min-h-screen bg-gray-50">
         {/* Header */}
         <Header
-          className="bg-white shadow-md px-4 sm:px-6 lg:px-8"
+          className="bg-white shadow-[0_4px_6px_-1px_rgba(0,0,0,0.1),0_2px_4px_-1px_rgba(0,0,0,0.06)] px-6 sm:px-8 lg:px-12"
           style={{
             height: '64px',
-            padding: '0',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
+            boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)',
           }}
         >
           <div className="flex items-center">
@@ -87,9 +91,24 @@ export default function Layout() {
                 borderRadius: '4px',
               }}
             />
+            <BarChart className="mr-2 sm:mr-3 text-blue-600" size={24} />
             <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
               Hedge Fund Tracker
             </h1>
+          </div>
+          <div className="flex items-center space-x-4 sm:space-x-6">
+            <div className="flex items-center">
+              <Text className="text-gray-600 mr-2">Available Quarters:</Text>
+              <Text className="font-semibold text-gray-800">{dashboardData.availableQuarters}</Text>
+            </div>
+            <div className="flex items-center">
+              <Text className="text-gray-600 mr-2">Recent Filings:</Text>
+              <Text className="font-semibold text-gray-800">{dashboardData.recentFilings}</Text>
+            </div>
+            <div className="flex items-center">
+              <Text className="text-gray-600 mr-2">Last Updated:</Text>
+              <Text className="font-semibold text-gray-800">{dashboardData.lastUpdated}</Text>
+            </div>
           </div>
         </Header>
 
@@ -125,7 +144,8 @@ export default function Layout() {
             collapsible
             defaultCollapsed={true}
             breakpoint="lg"
-            collapsedWidth="0"
+            collapsed={true}
+            collapsedWidth="64"
             zeroWidthTriggerStyle={{ display: 'none' }}
             className="bg-white shadow-md"
             style={{

@@ -2,15 +2,17 @@ import {useEffect, useState} from 'react'
 import {getQuarters} from '../api/analysis'
 import {getRecentFilings as getFilings} from '../api/filings'
 import {getAIAnalystReportsByQuarter, getAIAnalystReport} from '../api/ai'
-import {TrendingUp, FileText, Clock, Brain} from 'lucide-react'
+import {Brain} from 'lucide-react'
 import {Select} from 'antd'
 import TickerLogo from '../components/TickerLogo'
 import AIReportTile from '../components/AIReportTile'
 import LoadingSpinner from '../components/LoadingSpinner'
 import {getTileColor} from '../utils/score-colors'
 import {formatTimestamp} from '../utils/format'
+import {useDashboard} from '../contexts'
 
 export default function Home() {
+  const {updateQuarters, updateRecentFilings} = useDashboard()
   const [quarters, setQuarters] = useState([])
   const [filings, setFilings] = useState([])
   const [aiReports, setAiReports] = useState([])
@@ -58,6 +60,8 @@ export default function Home() {
 
         setQuarters(quartersData.data || [])
         setFilings(filingsData.data || [])
+        updateQuarters(quartersData.data)
+        updateRecentFilings(filingsData)
 
         // Get latest quarter
         const latestQuarter = quartersData.data?.[0] || null
@@ -100,51 +104,6 @@ export default function Home() {
 
   return (
       <div className="space-y-6 sm:space-y-8">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
-          <div className="card">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs sm:text-sm font-medium text-gray-500">Available
-                  Quarters</p>
-                <p className="text-2xl sm:text-3xl font-bold text-gray-900 mt-2">{quarters.length}</p>
-              </div>
-              <div className="p-2 sm:p-3 bg-blue-100 rounded-lg">
-                <TrendingUp className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600"/>
-              </div>
-            </div>
-          </div>
-
-          <div className="card">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs sm:text-sm font-medium text-gray-500">Recent
-                  Filings</p>
-                <p className="text-2xl sm:text-3xl font-bold text-gray-900 mt-2">{filings.total_filings
-                    || 0}</p>
-              </div>
-              <div className="p-2 sm:p-3 bg-green-100 rounded-lg">
-                <FileText className="h-5 w-5 sm:h-6 sm:w-6 text-green-600"/>
-              </div>
-            </div>
-          </div>
-
-          <div className="card">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs sm:text-sm font-medium text-gray-500">Last
-                  Updated</p>
-                <p className="text-2xl sm:text-3xl font-bold text-gray-900 mt-2">
-                  {quarters[0] || 'N/A'}
-                </p>
-              </div>
-              <div className="p-2 sm:p-3 bg-purple-100 rounded-lg">
-                <Clock className="h-5 w-5 sm:h-6 sm:w-6 text-purple-600"/>
-              </div>
-            </div>
-          </div>
-        </div>
-
         {/* AI Analyst Report */}
         {aiReport && aiReport.top_stocks && aiReport.top_stocks.length > 0 && (
             <div className="card">
