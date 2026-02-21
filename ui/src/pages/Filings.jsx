@@ -10,7 +10,7 @@ export default function Filings() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const response = await getRecentFilings(30)
+        const response = await getRecentFilings(90)
         setFilings(response)
       } catch (error) {
         console.error('Error fetching filings:', error)

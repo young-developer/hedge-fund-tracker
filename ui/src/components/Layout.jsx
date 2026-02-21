@@ -16,6 +16,7 @@ const navigation = [
 export default function Layout() {
   const location = useLocation()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true)
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -91,22 +92,48 @@ export default function Layout() {
 
       {/* Desktop Sidebar and Main Content */}
       <div className="flex">
-        <aside className="hidden lg:flex w-64 bg-white shadow-md min-h-screen flex-col">
-          <nav className="flex-1 p-4 sm:p-5 space-y-1">
+        <aside className={`hidden lg:flex bg-white shadow-md min-h-screen flex-col transition-all duration-300 sticky right-0 top-0 z-20 ${
+          sidebarCollapsed ? 'w-[64px]' : 'w-64'
+        }`}>
+          <div className="flex items-center justify-between p-4">
+            <button
+              type="button"
+              className="p-2 rounded-lg text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"
+              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+              aria-label="Toggle sidebar"
+            >
+              {sidebarCollapsed ? (
+                <Menu className="h-5 w-5" />
+              ) : (
+                <X className="h-5 w-5" />
+              )}
+            </button>
+          </div>
+          <nav className="flex-1 p-2 space-y-1">
             {navigation.map((item) => {
               const isActive = location.pathname === item.href
               return (
                 <Link
                   key={item.name}
                   to={item.href}
-                  className={`flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
+                  className={`flex items-center px-3 py-3 text-sm font-medium rounded-lg transition-colors relative ${
+                    sidebarCollapsed ? 'justify-center' : 'justify-start'
+                  } ${
                     isActive
                       ? 'bg-blue-100 text-blue-700'
                       : 'text-gray-700 hover:bg-gray-100'
                   }`}
+                  title={sidebarCollapsed ? item.name : undefined}
                 >
-                  <item.icon className="mr-3 h-5 w-5" />
-                  {item.name}
+                  <div className="relative group">
+                    <item.icon className={`h-5 w-5 flex-shrink-0 ${sidebarCollapsed ? '' : 'mr-3'}`} />
+                    <div className={`absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50 ${
+                      sidebarCollapsed ? '' : 'hidden'
+                    }`}>
+                      {item.name}
+                    </div>
+                  </div>
+                  {!sidebarCollapsed && <span>{item.name}</span>}
                 </Link>
               )
             })}
