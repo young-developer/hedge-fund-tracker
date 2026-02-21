@@ -1,4 +1,5 @@
  import { useEffect, useState, useMemo } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { getAIModels, runAIDueDiligence, getAIDueDiligenceReports, getAIDueDiligenceReport } from '../api/ai'
 import { searchStocks, getStockHoldings } from '../api/stocks'
 import { getQuarters, getLastQuarter } from '../api/analysis'
@@ -21,6 +22,7 @@ const loadSelectedModel = () => {
 }
 
 export default function AIDueDiligence() {
+  const [searchParams, setSearchParams] = useSearchParams()
   const [models, setModels] = useState([])
   const [quarters, setQuarters] = useState([])
   const [searchQuery, setSearchQuery] = useState('')
@@ -73,6 +75,14 @@ export default function AIDueDiligence() {
 
     fetchData()
   }, [])
+
+  useEffect(() => {
+    const tickerFromUrl = searchParams.get('ticker')
+    if (tickerFromUrl) {
+      setSearchQuery(tickerFromUrl)
+      handleSearch(tickerFromUrl)
+    }
+  }, [searchParams])
 
   useEffect(() => {
     if (selectedModel) {
@@ -151,9 +161,15 @@ export default function AIDueDiligence() {
     setSearchResults([])
   }
 
+  async function handleAutoSelectFromSearch(ticker, company) {
+    setSelectedStock({ ticker, company })
+    setAnalysis(null)
+    setSearchResults([])
+  }
+
   async function handleGenerateAnalysis() {
-    if (!selectedStock || !selectedModel || !selectedQuarter) {
-      setError('Please select a stock, model, and quarter')
+    if (!selectedStock) {
+      setError('Please select a stock')
       return
     }
 
@@ -359,7 +375,7 @@ export default function AIDueDiligence() {
                 {searchResults.map((stock) => (
                   <button
                     key={stock.CUSIP}
-                    onClick={() => handleSelectStock(stock.Ticker, stock.Company)}
+                    onClick={() => handleAutoSelectFromSearch(stock.Ticker, stock.Company)}
                     className="w-full flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors text-left"
                   >
                     <div className="flex items-center gap-3">
@@ -384,7 +400,7 @@ export default function AIDueDiligence() {
                 className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-4 px-6 rounded-lg shadow-lg transition-all duration-200 flex items-center justify-center gap-2"
               >
                 <Sparkles className="h-6 w-6" />
-                {generating ? 'Running AI Analysis...' : 'Generate Analysis'}
+                {generating ? 'Running AI Analysis...' : `Generate Analysis for ${selectedStock.ticker}`}
               </button>
             </div>
           )}

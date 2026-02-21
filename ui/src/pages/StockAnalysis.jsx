@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { searchStocks, getStockAnalysis, getStockHoldings } from '../api/stocks'
 import { getAllAvailableQuarters } from '../api/analysis'
 import Card from '../components/Card'
@@ -9,6 +10,7 @@ import TickerLogo from '../components/TickerLogo'
 import { Search, ChevronRight } from 'lucide-react'
 
 export default function StockAnalysis() {
+  const [searchParams, setSearchParams] = useSearchParams()
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState([])
   const [selectedStock, setSelectedStock] = useState(null)
@@ -50,6 +52,14 @@ export default function StockAnalysis() {
 
     fetchData()
   }, [])
+
+  useEffect(() => {
+    const tickerFromUrl = searchParams.get('ticker')
+    if (tickerFromUrl) {
+      setSearchQuery(tickerFromUrl)
+      handleSearch(tickerFromUrl)
+    }
+  }, [searchParams])
 
   async function handleSearch(query) {
     setSearchQuery(query)
@@ -101,7 +111,7 @@ export default function StockAnalysis() {
     }
   }
 
-  async function handleSelectStock(ticker, company) {
+  async function handleAutoSelectFromSearch(ticker, company) {
     if (!selectedQuarter) {
       setError('Please select a quarter first')
       return
@@ -205,7 +215,7 @@ export default function StockAnalysis() {
                     {filteredStocks.map((stock) => (
                       <button
                         key={stock.CUSIP}
-                        onClick={() => handleSelectStock(stock.Ticker, stock.Company)}
+                        onClick={() => handleAutoSelectFromSearch(stock.Ticker, stock.Company)}
                         className="w-full flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors text-left"
                       >
                         <div className="flex items-center gap-3">

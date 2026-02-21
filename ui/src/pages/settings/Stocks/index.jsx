@@ -1,4 +1,5 @@
-import {useState} from 'react'
+import {useState, useEffect} from 'react'
+import {useSearchParams} from 'react-router-dom'
 import {Input, Table} from 'antd'
 import {searchStocks} from '../../../api/settings'
 import TickerLogo from '../../../components/TickerLogo'
@@ -6,10 +7,19 @@ import TickerLogo from '../../../components/TickerLogo'
 const {Search: SearchInput} = Input
 
 export default function Stocks() {
+  const [searchParams, setSearchParams] = useSearchParams()
   const [searchQuery, setSearchQuery] = useState('')
   const [searchField, setSearchField] = useState('ticker')
   const [searchResults, setSearchResults] = useState([])
   const [searching, setSearching] = useState(false)
+
+  useEffect(() => {
+    const tickerFromUrl = searchParams.get('ticker')
+    if (tickerFromUrl) {
+      setSearchQuery(tickerFromUrl)
+      handleSearch(tickerFromUrl)
+    }
+  }, [searchParams])
 
   const handleSearch = async (value) => {
     if (!value.trim()) {
