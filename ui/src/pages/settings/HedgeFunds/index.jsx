@@ -19,41 +19,52 @@ export default function HedgeFunds() {
       'fund')
   const [searchHedgeFundsExcludedResults, setSearchHedgeFundsExcludedResults] = useState(
       [])
+  const [trackedFundsResults, setTrackedFundsResults] = useState(null)
+  const [excludedFundsResults, setExcludedFundsResults] = useState(null)
   const [hedgeFundsData, setHedgeFundsData] = useState([])
   const [excludedFundsData, setExcludedFundsData] = useState([])
   const [hedgeFundsLoading, setHedgeFundsLoading] = useState(true)
 
-  const handleHedgeFundSearch = (value) => {
+  const handleTrackedFundsSearch = (value) => {
     if (!value.trim()) {
-      if (hedgeFundsSubTab === 'all') {
-        setSearchHedgeFundsAllResults([])
-      } else {
-        setSearchHedgeFundsExcludedResults([])
-      }
+      setTrackedFundsResults(hedgeFundsData)
       return
     }
 
     const lowercasedValue = value.toLowerCase()
-    const data = hedgeFundsSubTab === 'all' ? hedgeFundsData : excludedFundsData
-    const searchField = hedgeFundsSubTab === 'all' ? searchHedgeFundsAllField
-        : searchHedgeFundsExcludedField
-
-    const results = data.filter((fund) => {
-      if (searchField === 'fund' && fund.Fund) {
+    const results = hedgeFundsData.filter((fund) => {
+      if (searchHedgeFundsAllField === 'fund' && fund.Fund) {
         return fund.Fund.toLowerCase().includes(lowercasedValue)
-      } else if (searchField === 'manager' && fund.Manager) {
+      } else if (searchHedgeFundsAllField === 'manager' && fund.Manager) {
         return fund.Manager.toLowerCase().includes(lowercasedValue)
-      } else if (searchField === 'cik' && fund.CIK) {
+      } else if (searchHedgeFundsAllField === 'cik' && fund.CIK) {
         return fund.CIK.toLowerCase().includes(lowercasedValue)
       }
       return false
     })
 
-    if (hedgeFundsSubTab === 'all') {
-      setSearchHedgeFundsAllResults(results)
-    } else {
-      setSearchHedgeFundsExcludedResults(results)
+    setTrackedFundsResults(results)
+  }
+
+  const handleExcludedFundsSearch = (value) => {
+    if (!value.trim()) {
+      setExcludedFundsResults(excludedFundsData)
+      return
     }
+
+    const lowercasedValue = value.toLowerCase()
+    const results = excludedFundsData.filter((fund) => {
+      if (searchHedgeFundsExcludedField === 'fund' && fund.Fund) {
+        return fund.Fund.toLowerCase().includes(lowercasedValue)
+      } else if (searchHedgeFundsExcludedField === 'manager' && fund.Manager) {
+        return fund.Manager.toLowerCase().includes(lowercasedValue)
+      } else if (searchHedgeFundsExcludedField === 'cik' && fund.CIK) {
+        return fund.CIK.toLowerCase().includes(lowercasedValue)
+      }
+      return false
+    })
+
+    setExcludedFundsResults(results)
   }
 
   const getFundColumns = () => [
@@ -101,13 +112,13 @@ export default function HedgeFunds() {
 
   return (
       <Tabs activeKey={hedgeFundsSubTab} onChange={setHedgeFundsSubTab}>
-        <TabPane tab="All Funds" key="all">
+        <TabPane tab="Tracked Funds" key="all">
           <div className="mb-4">
             <SearchInput
                 placeholder="Search funds by name, manager, or CIK..."
                 value={searchHedgeFundsAllQuery}
                 onChange={(e) => setSearchHedgeFundsAllQuery(e.target.value)}
-                onSearch={handleHedgeFundSearch}
+                onSearch={handleTrackedFundsSearch}
                 className="max-w-md"
                 allowClear
             />
@@ -129,14 +140,17 @@ export default function HedgeFunds() {
               <div className="flex items-center justify-center py-8">
                 <span className="text-gray-500">Loading...</span>
               </div>
-          ) : (
-              <Table
-                  columns={getFundColumns()}
-                  dataSource={searchHedgeFundsAllResults}
-                  rowKey="CIK"
-                  pagination={{pageSize: 10}}
-              />
-          )}
+      ) : (
+          <Table
+              columns={getFundColumns()}
+              dataSource={trackedFundsResults || hedgeFundsData}
+              rowKey="CIK"
+              pagination={{pageSize: 10}}
+          />
+      )}
+          <div className="mt-2 text-sm text-gray-600">
+            Showing <span className="font-semibold">{(trackedFundsResults || hedgeFundsData).length}</span> funds
+          </div>
         </TabPane>
         <TabPane tab="Excluded Funds" key="excluded">
           <div className="mb-4">
@@ -145,7 +159,7 @@ export default function HedgeFunds() {
                 value={searchHedgeFundsExcludedQuery}
                 onChange={(e) => setSearchHedgeFundsExcludedQuery(
                     e.target.value)}
-                onSearch={handleHedgeFundSearch}
+                onSearch={handleExcludedFundsSearch}
                 className="max-w-md"
                 allowClear
             />
@@ -167,14 +181,17 @@ export default function HedgeFunds() {
               <div className="flex items-center justify-center py-8">
                 <span className="text-gray-500">Loading...</span>
               </div>
-          ) : (
-              <Table
-                  columns={getFundColumns()}
-                  dataSource={searchHedgeFundsExcludedResults}
-                  rowKey="CIK"
-                  pagination={{pageSize: 10}}
-              />
-          )}
+      ) : (
+          <Table
+              columns={getFundColumns()}
+              dataSource={excludedFundsResults || excludedFundsData}
+              rowKey="CIK"
+              pagination={{pageSize: 10}}
+          />
+      )}
+          <div className="mt-2 text-sm text-gray-600">
+            Showing <span className="font-semibold">{(excludedFundsResults || excludedFundsData).length}</span> funds
+          </div>
         </TabPane>
       </Tabs>
   )

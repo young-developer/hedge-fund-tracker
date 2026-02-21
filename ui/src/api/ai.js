@@ -11,3 +11,11 @@ export const getLastAIAnalystReport = () => api.get('/api/ai/reports/analyst/lat
 export const getAIDueDiligenceReports = () => api.get('/api/ai/reports/due-diligence')
 export const getAIDueDiligenceReport = (reportId) => api.get(`/api/ai/reports/due-diligence/${reportId}`)
 export const getLastAIDueDiligenceReport = () => api.get('/api/ai/reports/due-diligence/latest')
+
+export const getAIReports = () => Promise.all([
+  getAIAnalystReports(),
+  getAIDueDiligenceReports()
+]).then(([analystReports, dueDiligenceReports]) => ({
+  analyst: analystReports.data || [],
+  dueDiligence: dueDiligenceReports.data || []
+}))

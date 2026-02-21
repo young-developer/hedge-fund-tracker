@@ -110,16 +110,23 @@ export default function AIDueDiligence() {
      return reports.filter(report => report.quarter === selectedQuarterFilter)
    }, [reports, selectedQuarterFilter])
 
-   const groupedReports = useMemo(() => {
-     return filteredReportsByQuarter.reduce((groups, report) => {
-       const quarter = report.quarter
-       if (!groups[quarter]) {
-         groups[quarter] = []
-       }
-       groups[quarter].push(report)
-       return groups
-     }, {})
-   }, [filteredReportsByQuarter])
+    const groupedReports = useMemo(() => {
+      return filteredReportsByQuarter.reduce((groups, report) => {
+        const quarter = report.quarter
+        if (!groups[quarter]) {
+          groups[quarter] = []
+        }
+        groups[quarter].push(report)
+        return groups
+      }, {})
+    }, [filteredReportsByQuarter])
+
+    const sortedGroupedReports = useMemo(() => {
+      return Object.entries(groupedReports)
+        .sort(([, reportsA], [, reportsB]) => {
+          return uniqueQuarters.indexOf(reportsA[0]) - uniqueQuarters.indexOf(reportsB[0])
+        })
+    }, [groupedReports, uniqueQuarters])
 
   async function handleSearch(query) {
     if (!query.trim()) {
@@ -256,12 +263,12 @@ export default function AIDueDiligence() {
                  ))}
                </select>
              </div>
-             <div className="space-y-3 max-h-64 overflow-y-auto">
-               {Object.entries(groupedReports).map(([quarter, quarterReports]) => (
-                 <div key={quarter}>
-                   <div className="text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide px-1">
-                     {quarter}
-                   </div>
+              <div className="space-y-3 max-h-64 overflow-y-auto">
+                {sortedGroupedReports.map(([quarter, quarterReports]) => (
+                  <div key={quarter}>
+                    <div className="text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide px-1">
+                      {quarter}
+                    </div>
                    {quarterReports.map((report) => (
                      <div
                        key={report.report_id}
@@ -444,10 +451,21 @@ export default function AIDueDiligence() {
                 {analysis.analysis && (
                   <>
                     <div>
-                      <h4 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
-                        <Sparkles className="h-5 w-5 text-purple-600" />
-                        Business Summary
-                      </h4>
+                      <div className="flex items-center gap-2 mb-2">
+                        <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+                          <Sparkles className="h-5 w-5 text-purple-600" />
+                          Business Summary
+                        </h4>
+                        {analysis.analysis.business_summary_sentiment && (
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                            analysis.analysis.business_summary_sentiment === 'Bullish' ? 'bg-green-100 text-green-800' :
+                            analysis.analysis.business_summary_sentiment === 'Neutral' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-red-100 text-red-800'
+                          }`}>
+                            {analysis.analysis.business_summary_sentiment}
+                          </span>
+                        )}
+                      </div>
                       <p className="text-gray-700">{analysis.analysis.business_summary}</p>
                     </div>
 

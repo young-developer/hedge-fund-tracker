@@ -107,16 +107,23 @@ export default function AIAnalyst() {
      return reports.filter(report => report.quarter === selectedQuarterFilter)
    }, [reports, selectedQuarterFilter])
 
-   const groupedReports = useMemo(() => {
-     return filteredReportsByQuarter.reduce((groups, report) => {
-       const quarter = report.quarter
-       if (!groups[quarter]) {
-         groups[quarter] = []
-       }
-       groups[quarter].push(report)
-       return groups
-     }, {})
-   }, [filteredReportsByQuarter])
+    const groupedReports = useMemo(() => {
+      return filteredReportsByQuarter.reduce((groups, report) => {
+        const quarter = report.quarter
+        if (!groups[quarter]) {
+          groups[quarter] = []
+        }
+        groups[quarter].push(report)
+        return groups
+      }, {})
+    }, [filteredReportsByQuarter])
+
+    const sortedGroupedReports = useMemo(() => {
+      return Object.entries(groupedReports)
+        .sort(([, reportsA], [, reportsB]) => {
+          return uniqueQuarters.indexOf(reportsA[0]) - uniqueQuarters.indexOf(reportsB[0])
+        })
+    }, [groupedReports, uniqueQuarters])
 
   async function handleGenerateAnalysis() {
     if (!selectedQuarter || !selectedModel) {
@@ -234,12 +241,12 @@ export default function AIAnalyst() {
                  ))}
                </select>
              </div>
-             <div className="space-y-3 max-h-64 overflow-y-auto">
-               {Object.entries(groupedReports).map(([quarter, quarterReports]) => (
-                 <div key={quarter}>
-                   <div className="text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide px-1">
-                     {quarter}
-                   </div>
+              <div className="space-y-3 max-h-64 overflow-y-auto">
+                {sortedGroupedReports.map(([quarter, quarterReports]) => (
+                  <div key={quarter}>
+                    <div className="text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide px-1">
+                      {quarter}
+                    </div>
                    {quarterReports.map((report) => (
                      <div
                        key={report.report_id}
