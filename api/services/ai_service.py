@@ -421,7 +421,7 @@ class AIService:
             return None
 
     @staticmethod
-    def get_all_ai_analyst_reports() -> list[dict[str, Any]]:
+    def get_ai_analyst_reports() -> list[dict[str, Any]]:
         """Get all AI analyst reports.
 
         Returns:
@@ -433,6 +433,29 @@ class AIService:
             return get_all_reports('ai_analyst')
         except Exception as e:
             logger.error(f"Failed to get AI analyst reports: {e}", exc_info=True)
+            return []
+
+    @staticmethod
+    def get_ai_analyst_reports_by_quarter(quarter: str) -> list[dict[str, Any]]:
+        """Get all AI analyst reports for a specific quarter.
+
+        Args:
+            quarter: Quarter in 'YYYYQN' format
+
+        Returns:
+            list: List of report metadata dictionaries for the specified quarter
+        """
+        try:
+            logger.info(f"Getting AI analyst reports for quarter: {quarter}")
+            from app.utils.database import get_all_reports
+
+            all_reports = get_all_reports('ai_analyst')
+            quarter_reports = [r for r in all_reports if r.get('quarter') == quarter]
+
+            logger.info(f"Found {len(quarter_reports)} reports for quarter {quarter}")
+            return quarter_reports
+        except Exception as e:
+            logger.error(f"Failed to get AI analyst reports by quarter: {e}", exc_info=True)
             return []
 
     @staticmethod
@@ -503,3 +526,18 @@ class AIService:
         except Exception as e:
             logger.error(f"Failed to get last AI due diligence report: {e}", exc_info=True)
             return None
+
+    @staticmethod
+    def get_all_ai_analyst_reports() -> list[dict[str, Any]]:
+        """Get all AI analyst reports.
+
+        Returns:
+            list: List of report metadata dictionaries
+        """
+        try:
+            logger.info("Getting all AI analyst reports")
+            from app.utils.database import get_all_reports
+            return get_all_reports('ai_analyst')
+        except Exception as e:
+            logger.error(f"Failed to get all AI analyst reports: {e}", exc_info=True)
+            return []

@@ -836,7 +836,7 @@ def get_funds_missing_quarters() -> dict[str, list[str]]:
     return missing_data_funds
 
 
-REPORT_FOLDER = './reports'
+REPORT_FOLDER = './__reports__'
 
 def create_report_folder():
     """Create reports folder if it doesn't exist."""

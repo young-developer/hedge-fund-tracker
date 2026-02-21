@@ -1,8 +1,8 @@
 import {useEffect, useState} from 'react'
 import {getQuarters} from '../api/analysis'
 import {getRecentFilings as getFilings} from '../api/filings'
-import {getLatestAIAnalystReportData} from '../api/ai'
-import {TrendingUp, FileText, Clock, Brain} from 'lucide-react'
+import {getLatestAIAnalystReportData, getAIAnalystReportsByQuarter, getAIAnalystReport} from '../api/ai'
+import {TrendingUp, FileText, Clock, Brain, Calendar} from 'lucide-react'
 import TickerLogo from '../components/TickerLogo'
 import AIReportTile from '../components/AIReportTile'
 import LoadingSpinner from '../components/LoadingSpinner'
@@ -12,31 +12,77 @@ import {formatTimestamp} from '../utils/format'
 export default function Home() {
   const [quarters, setQuarters] = useState([])
   const [filings, setFilings] = useState([])
+  const [aiReports, setAiReports] = useState([])
+  const [selectedReport, setSelectedReport] = useState(null)
   const [aiReport, setAiReport] = useState(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    let isMounted = true
+
     async function fetchData() {
       try {
-        const [quartersData, filingsData, aiReportData] = await Promise.all([
+        setLoading(true)
+
+        const [quartersData, filingsData] = await Promise.all([
           getQuarters(),
           getFilings(30),
-          getLatestAIAnalystReportData(),
         ])
+
+        if (!isMounted) return
+
         setQuarters(quartersData.data || [])
         setFilings(filingsData.data || [])
-        console.log('AI Report data:', aiReportData)
-        console.log('AI Report data type:', typeof aiReportData)
-        console.log('AI Report data keys:', aiReportData ? Object.keys(aiReportData) : 'null')
-        setAiReport(aiReportData)
+
+        // Get latest quarter
+        const latestQuarter = quartersData.data?.[0] || null
+        if (latestQuarter) {
+          const quarterReports = await getAIAnalystReportsByQuarter(latestQuarter)
+
+          if (!isMounted) return
+
+          setAiReports(quarterReports.data || [])
+
+          // Set the latest report as default
+          if (quarterReports.data && quarterReports.data.length > 0) {
+            const reportId = quarterReports.data[0].report_id
+            setSelectedReport(quarterReports.data[0])
+            console.log('Fetching full report for ID:', reportId)
+
+            // Fetch full report data
+            try {
+              const fullReport = await getAIAnalystReport(reportId)
+              console.log('Full report response type:', typeof fullReport)
+              console.log('Full report keys:', fullReport ? Object.keys(fullReport) : 'null')
+              console.log('Full report success:', fullReport?.success)
+              console.log('Full report data:', fullReport?.data)
+
+              if (fullReport && fullReport.data) {
+                setAiReport(fullReport.data)
+                console.log('Successfully set aiReport with', fullReport.data.top_stocks?.length || 0, 'stocks')
+              } else {
+                console.error('Full report data is empty or invalid')
+                console.error('fullReport:', fullReport)
+              }
+            } catch (error) {
+              console.error('Error fetching full report:', error)
+            }
+          }
+        }
       } catch (error) {
         console.error('Error fetching data:', error)
       } finally {
-        setLoading(false)
+        if (isMounted) {
+          setLoading(false)
+        }
       }
     }
 
     fetchData()
+
+    return () => {
+      isMounted = false
+    }
   }, [])
 
   if (loading) {
@@ -99,18 +145,38 @@ export default function Home() {
                 <div className="p-2 bg-indigo-100 rounded-lg">
                   <Brain className="h-5 w-5 sm:h-6 sm:w-6 text-indigo-600"/>
                 </div>
-                 <div>
-                   <h2 className="text-lg sm:text-xl font-semibold">Latest AI
-                     Analyst Report</h2>
-                   <p className="text-xs sm:text-sm text-gray-500">
-                     {aiReport.metadata?.quarter
-                         || 'N/A'} • {aiReport.metadata?.model_id || 'N/A'} •
-                     {aiReport.metadata?.generated_at
-                         ? formatTimestamp(aiReport.metadata.generated_at)
-                         : 'N/A'}
-                   </p>
-                 </div>
-              </div>
+                 <div className="flex-1">
+                    <h2 className="text-lg sm:text-xl font-semibold">Latest AI
+                      Analyst Report</h2>
+                    <p className="text-xs sm:text-sm text-gray-500">
+                      {aiReport.metadata?.quarter
+                          || 'N/A'} • {aiReport.metadata?.model_id || 'N/A'} •
+                      {aiReport.metadata?.generated_at
+                          ? formatTimestamp(aiReport.metadata.generated_at)
+                          : 'N/A'}
+                    </p>
+                  </div>
+                  {aiReports.length > 1 && !loading && (
+                    <select
+                      value={selectedReport?.metadata?.report_id || ''}
+                      onChange={(e) => {
+                        const report = aiReports.find(r => r.metadata.report_id === e.target.value)
+                        if (report) {
+                          setSelectedReport(report)
+                          setAiReport(report)
+                        }
+                      }}
+                      className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-300 rounded-lg text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+                    >
+                      <Calendar className="h-4 w-4 text-gray-500"/>
+                      {aiReports.map((report) => (
+                        <option key={report.metadata.report_id} value={report.metadata.report_id}>
+                          {formatTimestamp(report.metadata.generated_at)}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+               </div>
 
               <div
                   className="mb-2 sm:mb-3 flex flex-wrap gap-2 text-xs sm:text-sm">

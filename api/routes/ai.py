@@ -123,7 +123,7 @@ async def run_ai_due_diligence(request: dict):
         )
 
 
-@router.get("/reports/analyst", response_model=ReportListResponse)
+@router.get("/reports/analyst", response_model=ReportResponse)
 async def get_ai_analyst_reports():
     """Get all AI analyst reports."""
     try:
@@ -202,7 +202,36 @@ async def get_ai_analyst_report(report_id: str):
         )
 
 
-@router.get("/reports/due-diligence", response_model=ReportListResponse)
+@router.get("/reports/analyst/quarter/{quarter}", response_model=ReportResponse)
+async def get_ai_analyst_reports_by_quarter(quarter: str):
+    """Get all AI analyst reports for a specific quarter."""
+    try:
+        logger.info(f"Retrieving AI analyst reports for quarter: {quarter}")
+        reports = AIService.get_ai_analyst_reports_by_quarter(quarter)
+        if reports:
+            logger.info(f"Successfully retrieved {len(reports)} AI analyst reports for quarter {quarter}")
+            return ReportResponse(
+                success=True,
+                data=reports,
+                message=f"Retrieved {len(reports)} AI analyst reports for quarter {quarter}"
+            )
+        else:
+            logger.info(f"No AI analyst reports found for quarter {quarter}")
+            return ReportResponse(
+                success=False,
+                error="No reports found",
+                message=f"No AI analyst reports available for quarter {quarter}"
+            )
+    except Exception as e:
+        logger.error(f"Failed to get AI analyst reports by quarter: {e}", exc_info=True)
+        return ReportResponse(
+            success=False,
+            error=str(e),
+            message="Failed to get AI analyst reports by quarter"
+        )
+
+
+@router.get("/reports/due-diligence", response_model=ReportResponse)
 async def get_ai_due_diligence_reports():
     """Get all AI due diligence reports."""
     try:
