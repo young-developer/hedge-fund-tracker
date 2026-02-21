@@ -11,10 +11,12 @@ services:
       - API_HOST=0.0.0.0
       - API_PORT=8000
       - DB_FOLDER=/app/database
+      - LLAMA_CPP_BASE_URL=http://host.docker.internal:11434/v1
     ports:
       - "8000:8000"
     volumes:
       - ./database:/app/database
+      - ./__reports__:/app/__reports__
     networks:
       - hedge-fund-network
     healthcheck:
