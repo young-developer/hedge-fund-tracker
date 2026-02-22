@@ -52,6 +52,7 @@ class AnalysisService:
             top_increasing_positions = df[(df['Delta'] != np.inf) & (df['Holder_Count'] >= min_holder_threshold)].sort_values(by='Delta', ascending=False).head(top_n)
             top_bets = df.sort_values(by='Max_Portfolio_Pct', ascending=False).head(top_n)
             average_portfolio = df[df['Holder_Count'] >= min_holder_threshold].sort_values(by='Avg_Portfolio_Pct', ascending=False).head(top_n)
+            top_sells = df.sort_values(by=['Net_Buyers', 'Seller_Count', 'Total_Delta_Value'], ascending=True).head(top_n)
 
             return {
                 'QUARTER': quarter,
@@ -60,7 +61,8 @@ class AnalysisService:
                 'TOP_NEW_CONSENSUS': top_new_consensus.to_dict('records'),
                 'TOP_INCREASING_POSITIONS': top_increasing_positions.to_dict('records'),
                 'TOP_BETS': top_bets.to_dict('records'),
-                'AVERAGE_PORTFOLIO': average_portfolio.to_dict('records')
+                'AVERAGE_PORTFOLIO': average_portfolio.to_dict('records'),
+                'TOP_SELLS': top_sells.to_dict('records')
             }
         except Exception as e:
             return {"error": str(e)}

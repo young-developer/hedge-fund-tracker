@@ -7,7 +7,8 @@ import {
   Users,
   ArrowUp,
   TrendingDown,
-  Play
+  Play,
+  Trophy
 } from 'lucide-react'
 import TickerLogo from '../components/TickerLogo'
 import Card from '../components/Card'
@@ -243,14 +244,14 @@ export default function QuarterAnalysis() {
               </div>
           ),
     },
-    {
-      key: 'TOP_BETS',
-      label: (
-          <span className="flex items-center gap-2">
-          <TrendingDown className="h-4 w-4 text-red-600"/>
-          Big Bets
-        </span>
-      ),
+     {
+       key: 'TOP_BETS',
+       label: (
+           <span className="flex items-center gap-2">
+           <Trophy className="h-4 w-4 text-red-600"/>
+           Big Bets
+         </span>
+       ),
        children: analysis?.TOP_BETS && analysis.TOP_BETS.length > 0 && (
            <div
                className="overflow-x-auto -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
@@ -278,44 +279,79 @@ export default function QuarterAnalysis() {
           </div>
       ),
     },
-    {
-      key: 'AVERAGE_PORTFOLIO',
-      label: (
-          <span className="flex items-center gap-2">
-          <BarChart3 className="h-4 w-4 text-yellow-600"/>
-          Average Portfolio
-        </span>
-      ),
-       children: analysis?.AVERAGE_PORTFOLIO && analysis.AVERAGE_PORTFOLIO.length
-           > 0 && (
-               <div
-                   className="overflow-x-auto -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
-                  <AntdTable
-                      columns={getColumns([
-                        {key: 'Ticker', header: 'Ticker'},
-                        {key: 'Company', header: 'Company'},
-                        {key: 'Avg_Portfolio_Pct', header: 'Avg Portfolio %'},
-                        {key: 'Max_Portfolio_Pct', header: 'Max Portfolio %'},
-                        {key: 'Holder_Count', header: 'Holder Count'},
-                        {key: 'Delta', header: 'Delta'},
-                        {key: 'Total_Value', header: 'Total Value'}
-                      ], 'AVERAGE_PORTFOLIO')}
-                    dataSource={getSortedData(analysis.AVERAGE_PORTFOLIO,
-                        'AVERAGE_PORTFOLIO')}
-                    rowKey={(record) => record.Ticker}
-                    size="small"
-                    pagination={false}
-                    scroll={{x: 'max-content'}}
-                    onChange={(pagination, filters, sorter) => {
-                      if (sorter.columnKey) {
-                        handleSort(sorter.columnKey, 'AVERAGE_PORTFOLIO')
-                      }
-                    }}
-                />
-              </div>
-          ),
-    },
-  ]
+     {
+       key: 'AVERAGE_PORTFOLIO',
+       label: (
+           <span className="flex items-center gap-2">
+           <BarChart3 className="h-4 w-4 text-yellow-600"/>
+           Average Portfolio
+         </span>
+       ),
+        children: analysis?.AVERAGE_PORTFOLIO && analysis.AVERAGE_PORTFOLIO.length
+            > 0 && (
+                <div
+                    className="overflow-x-auto -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+                   <AntdTable
+                       columns={getColumns([
+                         {key: 'Ticker', header: 'Ticker'},
+                         {key: 'Company', header: 'Company'},
+                         {key: 'Avg_Portfolio_Pct', header: 'Avg Portfolio %'},
+                         {key: 'Max_Portfolio_Pct', header: 'Max Portfolio %'},
+                         {key: 'Holder_Count', header: 'Holder Count'},
+                         {key: 'Delta', header: 'Delta'},
+                         {key: 'Total_Value', header: 'Total Value'}
+                       ], 'AVERAGE_PORTFOLIO')}
+                     dataSource={getSortedData(analysis.AVERAGE_PORTFOLIO,
+                         'AVERAGE_PORTFOLIO')}
+                     rowKey={(record) => record.Ticker}
+                     size="small"
+                     pagination={false}
+                     scroll={{x: 'max-content'}}
+                     onChange={(pagination, filters, sorter) => {
+                       if (sorter.columnKey) {
+                         handleSort(sorter.columnKey, 'AVERAGE_PORTFOLIO')
+                       }
+                     }}
+                 />
+               </div>
+           ),
+     },
+     {
+       key: 'TOP_SELLS',
+       label: (
+           <span className="flex items-center gap-2">
+           <TrendingDown className="h-4 w-4 text-red-600"/>
+           Consensus Sells
+         </span>
+       ),
+        children: analysis?.TOP_SELLS && analysis.TOP_SELLS.length > 0 && (
+            <div
+                className="overflow-x-auto -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+              <AntdTable
+                  columns={getColumns([
+                    {key: 'Ticker', header: 'Ticker'},
+                    {key: 'Company', header: 'Company'},
+                    {key: 'Net_Buyers', header: 'Net Sellers'},
+                    {key: 'Seller_Count', header: 'Seller Count'},
+                    {key: 'Buyer_Count', header: 'Buyer Count'},
+                    {key: 'Delta', header: 'Delta'},
+                    {key: 'Total_Delta_Value', header: 'Total Delta Value'}
+                  ], 'TOP_SELLS')}
+                 dataSource={getSortedData(analysis.TOP_SELLS, 'TOP_SELLS')}
+                 rowKey={(record) => record.Ticker}
+                 size="small"
+                 pagination={false}
+                 scroll={{x: 'max-content'}}
+                 onChange={(pagination, filters, sorter) => {
+                   if (sorter.columnKey) {
+                     handleSort(sorter.columnKey, 'TOP_SELLS')
+                   }
+                 }}
+             />
+           </div>
+       ),
+     },
+   ]
 
   if (quarters.length === 0) {
     return (
