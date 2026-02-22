@@ -101,24 +101,48 @@ class StockService:
             dict: Stock analysis with holders, delta, etc.
         """
         try:
-            df = StockService.get_stock_holders(ticker, quarter)
+            df_analysis = stock_analysis(ticker, quarter)
 
-            if df.empty:
+            if df_analysis.empty:
                 return {"error": f"No data found for {ticker} in {quarter}"}
+
+            df_analysis = df_analysis.rename(columns={
+                'Fund': 'FUND',
+                'Ticker': 'TICKER',
+                'Company': 'COMPANY',
+                'Value': 'VALUE',
+                'Delta_Shares': 'DELTA_SHARES',
+                'Delta_Value': 'DELTA_VALUE',
+                'Portfolio_Pct': 'PORTFOLIO_PCT',
+                'Delta': 'DELTA'
+            })
+
+            total_value = df_analysis['VALUE'].sum()
+            total_delta_value = df_analysis['DELTA_VALUE'].sum()
+            avg_percentage = df_analysis['PORTFOLIO_PCT'].mean()
+            max_percentage = df_analysis['PORTFOLIO_PCT'].max()
+            num_buyers = (df_analysis['DELTA_VALUE'] > 0).sum()
+            num_sellers = (df_analysis['DELTA_VALUE'] < 0).sum()
+            holder_count = (df_analysis['DELTA'] != 'CLOSE').sum()
+            new_holder_count = (
+                df_analysis['DELTA'].str.startswith('NEW')).sum()
+            close_count = (df_analysis['DELTA'] == 'CLOSE').sum()
+            previous_total_value = total_value - total_delta_value
+            delta = total_delta_value / previous_total_value * 100 if previous_total_value != 0 else np.nan
 
             analysis = {
                 'TICKER': ticker.upper(),
-                'COMPANY': df['COMPANY'].iloc[0] if not df.empty else '',
-                'TOTAL_VALUE': float(df['VALUE'].sum()),
-                'TOTAL_DELTA_VALUE': float(df['DELTA_VALUE'].sum()),
-                'AVG_PERCENTAGE': float(df['PORTFOLIO_PCT'].mean()),
-                'MAX_PERCENTAGE': float(df['PORTFOLIO_PCT'].max()),
-                'HOLDER_COUNT': int(len(df)),
-                'NUM_BUYERS': int((df['DELTA_VALUE'] > 0).sum()),
-                'NUM_SELLERS': int((df['DELTA_VALUE'] < 0).sum()),
-                'NEW_HOLDER_COUNT': int((df['DELTA_SHARES'] > 0).sum()),
-                'CLOSE_COUNT': int((df['Shares'] == 0).sum()),
-                'BUYERS': convert_numpy_types(df[df['DELTA_VALUE'] > 0].to_dict('records'))
+                'COMPANY': df_analysis['COMPANY'].iloc[0],
+                'TOTAL_VALUE': float(total_value),
+                'TOTAL_DELTA_VALUE': float(total_delta_value),
+                'DELTA_PCT': {"NEW" if holder_count == new_holder_count and close_count == 0 else delta},
+                'AVG_PERCENTAGE': float(avg_percentage),
+                'MAX_PERCENTAGE': float(max_percentage),
+                'HOLDER_COUNT': holder_count,
+                'NUM_BUYERS': int(num_buyers),
+                'NUM_SELLERS': int(num_sellers),
+                'NEW_HOLDER_COUNT': int(new_holder_count),
+                'CLOSE_COUNT': int(close_count),
             }
 
             return convert_numpy_types(analysis)
