@@ -2,8 +2,10 @@
 Analysis service for API - wraps quarterly analysis functions.
 """
 from app.analysis.stocks import quarter_analysis
-from app.utils.database import get_all_quarters, get_last_quarter
+from app.utils.database import get_all_quarters, get_last_quarter, \
+    count_funds_in_quarter
 from typing import Any, Dict
+import numpy as np
 
 
 class AnalysisService:
@@ -26,7 +28,7 @@ class AnalysisService:
             quarter (str): Quarter in 'YYYYQN' format.
 
         Returns:
-            dict: Quarter analysis with all 5 sections.
+            dict: Quarter analysis with all 5 sections matching print output.
         """
         try:
             df = quarter_analysis(quarter)
@@ -42,12 +44,14 @@ class AnalysisService:
                     'TOP_BETS': [],
                     'AVERAGE_PORTFOLIO': []
                 }
+            top_n = 15
+            min_holder_threshold = round(count_funds_in_quarter(quarter) / 10)
 
-            top_buys = df.sort_values(by='Total_Delta_Value', ascending=False).head(15)
-            top_new_consensus = df.sort_values(by='New_Holder_Count', ascending=False).head(15)
-            top_increasing_positions = df[df['Delta'] > 0].sort_values(by='Delta', ascending=False).head(15)
-            top_bets = df.sort_values(by='Net_Buyers', ascending=False).head(15)
-            average_portfolio = df.sort_values(by='Max_Portfolio_Pct', ascending=False).head(15)[['Ticker', 'Company', 'Avg_Portfolio_Pct', 'Max_Portfolio_Pct', 'Holder_Count', 'Delta']]
+            top_buys = df.sort_values(by=['Net_Buyers', 'Buyer_Count', 'Total_Delta_Value'], ascending=False).head(top_n)
+            top_new_consensus = df.sort_values(by=['New_Holder_Count', 'Total_Delta_Value'], ascending=False).head(top_n)
+            top_increasing_positions = df[(df['Delta'] != np.inf) & (df['Holder_Count'] >= min_holder_threshold)].sort_values(by='Delta', ascending=False).head(top_n)
+            top_bets = df.sort_values(by='Max_Portfolio_Pct', ascending=False).head(top_n)
+            average_portfolio = df[df['Holder_Count'] >= min_holder_threshold].sort_values(by='Avg_Portfolio_Pct', ascending=False).head(top_n)
 
             return {
                 'QUARTER': quarter,

@@ -290,15 +290,16 @@ export default function QuarterAnalysis() {
            > 0 && (
                <div
                    className="overflow-x-auto -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
-                 <AntdTable
-                     columns={getColumns([
-                       {key: 'Ticker', header: 'Ticker'},
-                       {key: 'Company', header: 'Company'},
-                       {key: 'Avg_Portfolio_Pct', header: 'Avg Portfolio %'},
-                       {key: 'Max_Portfolio_Pct', header: 'Max Portfolio %'},
-                       {key: 'Holder_Count', header: 'Holder Count'},
-                       {key: 'Delta', header: 'Delta'}
-                     ], 'AVERAGE_PORTFOLIO')}
+                  <AntdTable
+                      columns={getColumns([
+                        {key: 'Ticker', header: 'Ticker'},
+                        {key: 'Company', header: 'Company'},
+                        {key: 'Avg_Portfolio_Pct', header: 'Avg Portfolio %'},
+                        {key: 'Max_Portfolio_Pct', header: 'Max Portfolio %'},
+                        {key: 'Holder_Count', header: 'Holder Count'},
+                        {key: 'Delta', header: 'Delta'},
+                        {key: 'Total_Value', header: 'Total Value'}
+                      ], 'AVERAGE_PORTFOLIO')}
                     dataSource={getSortedData(analysis.AVERAGE_PORTFOLIO,
                         'AVERAGE_PORTFOLIO')}
                     rowKey={(record) => record.Ticker}
