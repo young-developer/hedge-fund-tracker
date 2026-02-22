@@ -541,3 +541,38 @@ class AIService:
         except Exception as e:
             logger.error(f"Failed to get all AI analyst reports: {e}", exc_info=True)
             return []
+
+    @staticmethod
+    def delete_report(report_type: str, report_id: str) -> dict[str, Any]:
+        """Delete a specific AI report.
+
+        Args:
+            report_type: 'ai_analyst' or 'ai_due_diligence'
+            report_id: Report ID to delete
+
+        Returns:
+            dict: Response with success status and message
+        """
+        try:
+            logger.info(f"Deleting report: {report_id} of type: {report_type}")
+            from app.utils.database import delete_report
+            success = delete_report(report_type, report_id)
+            
+            if success:
+                logger.info(f"Successfully deleted report: {report_id}")
+                return {
+                    'success': True,
+                    'message': f"Successfully deleted {report_type} report {report_id}"
+                }
+            else:
+                logger.warning(f"Failed to delete report: {report_id}")
+                return {
+                    'success': False,
+                    'error': f"Report {report_id} not found"
+                }
+        except Exception as e:
+            logger.error(f"Failed to delete report: {e}", exc_info=True)
+            return {
+                'success': False,
+                'error': str(e)
+            }

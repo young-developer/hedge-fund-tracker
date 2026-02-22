@@ -1,10 +1,11 @@
 import {useState, useEffect, useMemo} from 'react'
-import {Select, Badge, Empty, Spin, Modal} from 'antd'
-import {BarChart3, FileCheck} from 'lucide-react'
+import {Select, Badge, Empty, Spin, Modal, Button} from 'antd'
+import {BarChart3, FileCheck, Trash2, AlertTriangle} from 'lucide-react'
 import {
   getAIReports,
   getAIAnalystReport,
-  getAIDueDiligenceReport
+  getAIDueDiligenceReport,
+  deleteAIReport
 } from '../../../api/ai'
 import TickerLogo from '../../../components/TickerLogo'
 import api from '../../../services/api'
@@ -21,32 +22,33 @@ export default function AIReports() {
   const [reportData, setReportData] = useState(null)
   const [loadingReport, setLoadingReport] = useState(false)
   const [error, setError] = useState('')
+  const [deletingReport, setDeletingReport] = useState(null)
+
+  const loadAiReports = async () => {
+    setAiReportsLoading(true)
+    try {
+      const response = await getAIReports()
+      setAiReports(response)
+
+      const quarters = new Set()
+      const allReports = [
+        ...response.analyst.map(r => ({ ...r, type: 'analyst' })),
+        ...response.dueDiligence.map(r => ({ ...r, type: 'dueDiligence' }))
+      ]
+      allReports.forEach(report => {
+        quarters.add(report.quarter)
+      })
+      const sortedQuarters = Array.from(quarters).sort().reverse()
+      setLatestQuarter(sortedQuarters[0] || 'all')
+      setSelectedQuarterFilter(sortedQuarters[0] || 'all')
+    } catch (error) {
+      console.error('Error loading AI reports:', error)
+    } finally {
+      setAiReportsLoading(false)
+    }
+  }
 
   useEffect(() => {
-    const loadAiReports = async () => {
-      setAiReportsLoading(true)
-      try {
-        const response = await getAIReports()
-        setAiReports(response)
-
-        const quarters = new Set()
-        const allReports = [
-          ...response.analyst.map(r => ({ ...r, type: 'analyst' })),
-          ...response.dueDiligence.map(r => ({ ...r, type: 'dueDiligence' }))
-        ]
-        allReports.forEach(report => {
-          quarters.add(report.quarter)
-        })
-        const sortedQuarters = Array.from(quarters).sort().reverse()
-        setLatestQuarter(sortedQuarters[0] || 'all')
-        setSelectedQuarterFilter(sortedQuarters[0] || 'all')
-      } catch (error) {
-        console.error('Error loading AI reports:', error)
-      } finally {
-        setAiReportsLoading(false)
-      }
-    }
-
     loadAiReports()
   }, [])
 
@@ -137,6 +139,91 @@ export default function AIReports() {
     }
   }
 
+  async function handleDeleteReport(report) {
+    try {
+      setDeletingReport(report.report_id)
+      
+      Modal.confirm({
+        title: 'Delete AI Report',
+        icon: <AlertTriangle className="w-6 h-6 text-yellow-500" />,
+        content: (
+          <div className="space-y-3">
+            <p className="text-gray-700">
+              Are you sure you want to delete this report? This action cannot be undone.
+            </p>
+            <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded">
+              <div className="flex justify-between">
+                <span>Type:</span>
+                <span className="font-medium capitalize">{report.type}</span>
+              </div>
+              {report.type === 'analyst' ? (
+                <>
+                  <div className="flex justify-between">
+                    <span>Quarter:</span>
+                    <span className="font-medium">{report.quarter}</span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="flex justify-between">
+                    <span>Ticker:</span>
+                    <span className="font-medium">{report.ticker}</span>
+                  </div>
+                </>
+              )}
+              <div className="flex justify-between">
+                <span>Model:</span>
+                <span className="font-medium">{report.model_id}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Generated:</span>
+                <span className="font-medium">
+                  {new Date(report.generated_at).toLocaleDateString()}
+                </span>
+              </div>
+            </div>
+          </div>
+        ),
+        okText: 'Delete',
+        okType: 'danger',
+        cancelText: 'Cancel',
+        onOk: async () => {
+          try {
+            const response = await deleteAIReport(report.type, report.report_id)
+            if (response.success) {
+              Modal.success({
+                title: 'Report Deleted',
+                content: response.message,
+                okText: 'OK',
+              })
+              loadAiReports()
+            } else {
+              Modal.error({
+                title: 'Delete Failed',
+                content: response.error || 'Failed to delete report',
+                okText: 'OK',
+              })
+            }
+          } catch (err) {
+            Modal.error({
+              title: 'Delete Failed',
+              content: err.message || 'Failed to delete report',
+              okText: 'OK',
+            })
+          } finally {
+            setDeletingReport(null)
+          }
+        },
+        onCancel: () => {
+          setDeletingReport(null)
+        },
+      })
+    } catch (err) {
+      setError(err.message || 'Failed to initiate deletion')
+      setDeletingReport(null)
+    }
+  }
+
   return (
       <div className="space-y-6">
         {aiReportsLoading ? (
@@ -201,52 +288,66 @@ export default function AIReports() {
                         {quarter}
                       </div>
                           <div className="space-y-2">
-                            {quarterReports.map((report) => (
-                                <div
-                                    key={`${report.report_id}-${report.type}`}
-                                    className={`border rounded-lg p-4 hover:bg-gray-50 cursor-pointer transition-colors ${
-                                        selectedReport?.report_id
-                                        === report.report_id
-                                        && selectedReport?.type === report.type
-                                            ? 'bg-purple-50 border-purple-300'
-                                            : 'border-gray-200'
-                                    }`}
-                                    onClick={() => handleLoadReport(report)}
-                                >
-                                  <div
-                                      className="flex items-start justify-between">
-                                    <div className="flex items-start gap-3">
-                                      {getReportIcon(report.type)}
-                                      <div>
-                                        <div
-                                            className="flex items-center gap-2">
-                              <span
-                                  className={`text-xs px-2 py-0.5 rounded-full font-medium ${getReportTypeBadgeColor(
-                                      report.type)}`}>
-                                {getReportTypeLabel(report.type)}
-                              </span>
-                                          <span
-                                              className="text-sm font-medium text-gray-900">
-                                {report.type === 'analyst'
-                                    ? 'Top Stocks Analysis'
-                                    : `${report.ticker} Analysis`}
-                              </span>
-                                        </div>
-                                        <p className="text-xs text-gray-500 mt-1">
-                                          {report.model_id} • {new Date(
-                                            report.generated_at).toLocaleDateString()}
-                                        </p>
-                                      </div>
-                                    </div>
-                                    <Badge
-                                        count={report.type === 'analyst'
-                                            ? report.top_stocks?.length : 1}
-                                        showZero
-                                        className="bg-gray-100 text-gray-600"
-                                    />
-                                  </div>
-                                </div>
-                            ))}
+                             {quarterReports.map((report) => (
+                                 <div
+                                     key={`${report.report_id}-${report.type}`}
+                                     className={`border rounded-lg p-4 hover:bg-gray-50 cursor-pointer transition-colors ${
+                                         selectedReport?.report_id
+                                         === report.report_id
+                                         && selectedReport?.type === report.type
+                                             ? 'bg-purple-50 border-purple-300'
+                                             : 'border-gray-200'
+                                     }`}
+                                     onClick={() => handleLoadReport(report)}
+                                 >
+                                   <div
+                                       className="flex items-start justify-between">
+                                     <div className="flex items-start gap-3">
+                                       {getReportIcon(report.type)}
+                                       <div>
+                                         <div
+                                             className="flex items-center gap-2">
+                               <span
+                                   className={`text-xs px-2 py-0.5 rounded-full font-medium ${getReportTypeBadgeColor(
+                                       report.type)}`}>
+                                 {getReportTypeLabel(report.type)}
+                               </span>
+                                           <span
+                                               className="text-sm font-medium text-gray-900">
+                                 {report.type === 'analyst'
+                                     ? 'Top Stocks Analysis'
+                                     : `${report.ticker} Analysis`}
+                               </span>
+                                         </div>
+                                         <p className="text-xs text-gray-500 mt-1">
+                                           {report.model_id} • {new Date(
+                                             report.generated_at).toLocaleDateString()}
+                                         </p>
+                                       </div>
+                                     </div>
+                                     <div className="flex items-center gap-2">
+                                       <Badge
+                                           count={report.type === 'analyst'
+                                               ? report.top_stocks?.length : 1}
+                                           showZero
+                                           className="bg-gray-100 text-gray-600"
+                                       />
+                                       <Button
+                                           type="text"
+                                           danger
+                                           size="small"
+                                           icon={<Trash2 className="h-4 w-4" />}
+                                           onClick={(e) => {
+                                             e.stopPropagation()
+                                             handleDeleteReport(report)
+                                           }}
+                                           disabled={deletingReport === report.report_id}
+                                           title="Delete Report"
+                                       />
+                                     </div>
+                                   </div>
+                                 </div>
+                             ))}
                           </div>
                         </div>
                     ))}

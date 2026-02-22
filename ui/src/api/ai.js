@@ -37,3 +37,10 @@ export const getLatestAIAnalystReportData = async () => {
     return null
   }
 }
+
+export const deleteAIReport = (reportType, reportId) => {
+  const formattedType = reportType === 'analyst' ? 'ai_analyst' : 
+                        reportType === 'dueDiligence' ? 'ai_due_diligence' : 
+                        reportType
+  return api.delete(`/api/ai/reports/${formattedType}/${reportId}`)
+}

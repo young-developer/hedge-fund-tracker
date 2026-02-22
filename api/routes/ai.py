@@ -308,3 +308,43 @@ async def get_ai_due_diligence_report(report_id: str):
             error=str(e),
             message="Failed to get AI due diligence report"
         )
+
+
+@router.delete("/reports/{report_type}/{report_id}", response_model=ReportResponse)
+async def delete_ai_report(report_type: str, report_id: str):
+    """Delete a specific AI report."""
+    try:
+        logger.info(f"Deleting AI report: {report_id} of type: {report_type}")
+        
+        valid_types = ['ai_analyst', 'ai_due_diligence']
+        if report_type not in valid_types:
+            logger.warning(f"Invalid report type: {report_type}")
+            return ReportResponse(
+                success=False,
+                error=f"Invalid report type: {report_type}. Must be one of: {valid_types}",
+                message="Invalid report type"
+            )
+
+        result = AIService.delete_report(report_type, report_id)
+        
+        if result['success']:
+            logger.info(f"Successfully deleted AI report: {report_id}")
+            return ReportResponse(
+                success=True,
+                data=None,
+                message=f"Successfully deleted {report_type} report {report_id}"
+            )
+        else:
+            logger.warning(f"Failed to delete AI report: {report_id}")
+            return ReportResponse(
+                success=False,
+                error=result.get('error', 'Unknown error'),
+                message=f"Failed to delete {report_type} report {report_id}"
+            )
+    except Exception as e:
+        logger.error(f"Failed to delete AI report: {e}", exc_info=True)
+        return ReportResponse(
+            success=False,
+            error=str(e),
+            message="Failed to delete AI report"
+        )
