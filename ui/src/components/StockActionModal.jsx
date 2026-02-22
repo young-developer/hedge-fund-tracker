@@ -1,7 +1,8 @@
-import {X} from 'lucide-react'
+import {X, TrendingUp, TrendingDown, DollarSign} from 'lucide-react'
 import {useNavigate} from 'react-router-dom'
+import {getRecommendationColorClass} from '../utils/score-colors'
 
-export default function StockActionModal({stock, onClose}) {
+export default function StockActionModal({stock, recommendation, onClose}) {
   const navigate = useNavigate()
 
   const handleTradingView = () => {
@@ -15,6 +16,8 @@ export default function StockActionModal({stock, onClose}) {
   const handleRunAIDueDiligence = () => {
     navigate(`/ai-due-diligence?ticker=${encodeURIComponent(stock.ticker)}`)
   }
+
+  const recommendationClass = getRecommendationColorClass(recommendation?.label)
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={onClose}>
@@ -33,6 +36,56 @@ export default function StockActionModal({stock, onClose}) {
             <X className="h-5 w-5" />
           </button>
         </div>
+
+        {recommendation && recommendation.label !== 'N/A' && (
+            <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <span className={`px-2 py-1 rounded-full text-xs font-medium border ${recommendationClass}`}>
+                  {recommendation.label}
+                </span>
+                {recommendation.confidence !== undefined && (
+                    <span className="text-xs text-gray-600">
+                      {Math.round(recommendation.confidence * 100)}% confidence
+                    </span>
+                )}
+              </div>
+
+              {recommendation.total_value !== undefined && (
+                  <div className="text-sm text-gray-600 mb-1">
+                    Total Value: ${recommendation.total_value.toLocaleString(undefined, {maximumFractionDigits: 0})}
+                  </div>
+              )}
+
+              {recommendation.delta_value !== undefined && (
+                  <div className="flex items-center gap-1 text-sm">
+                    {getTrendIcon(recommendation.delta_value)}
+                    <span className="text-gray-600">
+                      Delta: ${recommendation.delta_value.toLocaleString(undefined, {maximumFractionDigits: 0})}
+                    </span>
+                  </div>
+              )}
+
+              {recommendation.delta_pct !== undefined && (
+                  <div className="text-sm text-gray-600 mt-1">
+                    Delta %: {recommendation.delta_pct > 0 ? '+' : ''}{recommendation.delta_pct.toFixed(1)}%
+                  </div>
+              )}
+
+              {recommendation.net_buyers !== undefined && (
+                  <div className="text-sm text-gray-600 mt-1">
+                    Net Buyers: {recommendation.net_buyers > 0 ? '+' : ''}{recommendation.net_buyers}
+                  </div>
+              )}
+
+              {recommendation.reasoning && (
+                  <div className="text-xs text-gray-500 mt-2">
+                    <p className="font-medium mb-1">Reasoning:</p>
+                    <p>{recommendation.reasoning}</p>
+                  </div>
+              )}
+            </div>
+        )}
+
         <div className="space-y-3">
           <button
             onClick={handleTradingView}
@@ -59,4 +112,10 @@ export default function StockActionModal({stock, onClose}) {
       </div>
     </div>
   )
+}
+
+function getTrendIcon(deltaValue) {
+  if (deltaValue > 0) return <TrendingUp className="h-4 w-4 text-green-600" />
+  if (deltaValue < 0) return <TrendingDown className="h-4 w-4 text-red-600" />
+  return <DollarSign className="h-4 w-4 text-gray-600" />
 }

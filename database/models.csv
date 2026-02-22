@@ -8,4 +8,6 @@
 "stepfun/step-3.5-flash:free","StepFun Step 3.5 Flash","OpenRouter"
 "arcee-ai/trinity-large-preview:free","Arcee AI: Trinity Large","OpenRouter"
 "glm_4_7_flash_q6_tools","GLM 4.7 Flash","LlamaCpp"
+"glm_4_7_flash_q6_finance","GLM 4.7 Flash Finance","LlamaCpp"
 "qwen3_coder_next","Qwen Coder Next","LlamaCpp"
+"devstral_small_2512","Devstral Small","LlamaCpp"

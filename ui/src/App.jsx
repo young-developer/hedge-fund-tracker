@@ -8,6 +8,7 @@ import AIAnalyst from './pages/AIAnalyst'
 import AIDueDiligence from './pages/AIDueDiligence'
 import Filings from './pages/Filings'
 import Settings from './pages/Settings'
+import MyPortfolio from './pages/MyPortfolio'
 import {DashboardProvider} from './contexts/DashboardContext'
 
 function App() {
@@ -20,6 +21,7 @@ function App() {
               <Route path="quarters" element={<QuarterAnalysis/>}/>
               <Route path="funds" element={<FundAnalysis/>}/>
               <Route path="stocks" element={<StockAnalysis/>}/>
+              <Route path="portfolio" element={<MyPortfolio/>}/>
               <Route path="filings" element={<Filings/>}/>
               <Route path="ai-analyst" element={<AIAnalyst/>}/>
               <Route path="ai-due-diligence" element={<AIDueDiligence/>}/>

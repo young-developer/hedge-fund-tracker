@@ -2,10 +2,15 @@ import {useEffect, useState} from 'react'
 import {getQuarters} from '../api/analysis'
 import {getRecentFilings as getFilings} from '../api/filings'
 import {getAIAnalystReportsByQuarter, getAIAnalystReport} from '../api/ai'
+import {
+  getPortfolioFromStorage,
+  getStockRecommendation,
+} from '../api/portfolio'
 import {Brain} from 'lucide-react'
 import {Select} from 'antd'
 import TickerLogo from '../components/TickerLogo'
 import AIReportTile from '../components/AIReportTile'
+import PortfolioTile from '../components/PortfolioTile'
 import LoadingSpinner from '../components/LoadingSpinner'
 import {getTileColor} from '../utils/score-colors'
 import {formatTimestamp} from '../utils/format'
@@ -16,24 +21,24 @@ export default function Home() {
   const [quarters, setQuarters] = useState([])
   const [filings, setFilings] = useState([])
   const [aiReports, setAiReports] = useState([])
+  const [portfolio, setPortfolio] = useState([])
+  const [portfolioAnalysis, setPortfolioAnalysis] = useState({})
   const [selectedReport, setSelectedReport] = useState(null)
   const [aiReport, setAiReport] = useState(null)
   const [loading, setLoading] = useState(true)
   const [reportLoading, setReportLoading] = useState(false)
+  const [portfolioLoading, setPortfolioLoading] = useState(true)
 
   async function loadReportData(reportId) {
-    if (!reportId) return
+    if (!reportId) {
+      return
+    }
 
     setReportLoading(true)
     try {
-      console.log('Fetching report data for:', reportId)
       const fullReport = await getAIAnalystReport(reportId)
-      console.log('Full report response:', fullReport)
       if (fullReport && fullReport.data) {
-        console.log('Top stocks count:', fullReport.data.top_stocks?.length || 0)
         setAiReport(fullReport.data)
-        console.log('Report data set successfully')
-        console.log('New report data:', fullReport.data)
       }
     } catch (error) {
       console.error('Error fetching full report:', error)
@@ -63,8 +68,45 @@ export default function Home() {
         updateQuarters(quartersData.data)
         updateRecentFilings(filingsData)
 
+        // Load portfolio
+        const portfolioData = getPortfolioFromStorage()
+        setPortfolio(portfolioData)
+
+        // Load portfolio analysis for latest quarter
+        const latestQuarter = quartersData.data?.[0]
+        if (portfolioData.length > 0 && latestQuarter) {
+          try {
+            setPortfolioLoading(true)
+            const analysisPromises = portfolioData.map(stock =>
+                getStockRecommendation(stock.ticker, latestQuarter)
+            )
+
+            const analysisResults = await Promise.all(analysisPromises)
+
+            const analysisMap = {}
+            analysisResults.forEach((result, index) => {
+              if (result) {
+                analysisMap[portfolioData[index].ticker] = result
+              } else {
+                analysisMap[portfolioData[index].ticker] = {
+                  label: 'N/A',
+                  confidence: 0,
+                  reasoning: 'No data'
+                }
+              }
+              console.log(analysisMap);
+            })
+            setPortfolioAnalysis(analysisMap)
+          } catch (error) {
+            console.error('Error loading portfolio analysis:', error)
+          } finally {
+            setPortfolioLoading(false)
+          }
+        } else {
+          setPortfolioLoading(false)
+        }
+
         // Get latest quarter
-        const latestQuarter = quartersData.data?.[0] || null
         if (latestQuarter) {
           const quarterReports = await getAIAnalystReportsByQuarter(
               latestQuarter)
@@ -104,6 +146,49 @@ export default function Home() {
 
   return (
       <div className="space-y-6 sm:space-y-8">
+        {/* My Portfolio */}
+        {portfolio.length > 0 && (
+            <div className="card">
+              <div className="flex items-center gap-2 mb-3 sm:mb-4">
+                <div className="p-2 bg-green-100 rounded-lg">
+                  <Brain className="h-5 w-5 sm:h-6 sm:w-6 text-green-600"/>
+                </div>
+                <div className="flex-1">
+                  <h2 className="text-lg sm:text-xl font-semibold">My
+                    Portfolio</h2>
+                  <p className="text-xs sm:text-sm text-gray-500">
+                    {portfolio.length} stocks • Latest quarter analysis
+                  </p>
+                </div>
+              </div>
+
+              {portfolioLoading && (
+                  <LoadingSpinner message="Loading portfolio analysis..."/>
+              )}
+
+              {!portfolioLoading && (
+                  <div
+                      className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-3">
+                    {portfolio.map((stock) => {
+                      return (
+                          <PortfolioTile key={stock.ticker} stock={stock}
+                                         analysis={portfolioAnalysis}/>
+                      )
+                    })}
+                  </div>
+              )}
+
+              <div className="mt-3 sm:mt-4 text-center">
+                <a
+                    href="/portfolio"
+                    className="text-green-600 hover:text-green-800 font-medium text-sm sm:text-base"
+                >
+                  View full portfolio →
+                </a>
+              </div>
+            </div>
+        )}
+
         {/* AI Analyst Report */}
         {aiReport && aiReport.top_stocks && aiReport.top_stocks.length > 0 && (
             <div className="card">
@@ -122,32 +207,32 @@ export default function Home() {
                         : 'N/A'}
                   </p>
                 </div>
-                  {aiReports.length > 1 && !loading && (
+                {aiReports.length > 1 && !loading && (
                     <>
                       <Select
-                        value={selectedReport?.report_id || undefined}
-                        onChange={async (reportId) => {
-                          const report = aiReports.find(r => r.report_id === reportId)
-                          if (report) {
-                            setSelectedReport(report)
-                            console.log('Selecting report:', reportId)
-                            console.log('Report details:', report)
-                            await loadReportData(reportId)
-                          }
-                        }}
-                        className="w-64"
-                        size="small"
-                        loading={reportLoading}
-                        options={aiReports
+                          value={selectedReport?.report_id || undefined}
+                          onChange={async (reportId) => {
+                            const report = aiReports.find(
+                                r => r.report_id === reportId)
+                            if (report) {
+                              setSelectedReport(report)
+                              await loadReportData(reportId)
+                            }
+                          }}
+                          className="w-64"
+                          size="small"
+                          loading={reportLoading}
+                          options={aiReports
                           .filter(report => report)
                           .map(report => ({
                             value: report.report_id,
-                            label: `${report.model_id} ${formatTimestamp(report.generated_at)}`
+                            label: `${report.model_id} ${formatTimestamp(
+                                report.generated_at)}`
                           }))}
-                        placeholder="Select report"
+                          placeholder="Select report"
                       />
                     </>
-                  )}
+                )}
               </div>
 
               <div

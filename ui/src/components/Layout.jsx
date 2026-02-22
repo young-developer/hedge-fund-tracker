@@ -10,7 +10,8 @@ import {
   Settings,
   Sparkles,
   Search,
-  BarChart
+  BarChart,
+  Wallet
 } from 'lucide-react'
 import {useDashboard} from '../contexts'
 
@@ -22,6 +23,7 @@ const navigation = [
   { name: 'Quarter Analysis', href: '/quarters', icon: BarChart3 },
   { name: 'Funds', href: '/funds', icon: Building2 },
   { name: 'Stocks', href: '/stocks', icon: TrendingUp },
+  { name: 'My Portfolio', href: '/portfolio', icon: Wallet },
   { name: 'Filings', href: '/filings', icon: FileText },
   { name: 'AI Analyst', href: '/ai-analyst', icon: Sparkles },
   { name: 'AI Due Diligence', href: '/ai-due-diligence', icon: Search },
