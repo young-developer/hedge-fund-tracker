@@ -5,8 +5,8 @@ import {getAllAvailableQuarters} from '../api/analysis'
 import Card from '../components/Card'
 import LoadingSpinner from '../components/LoadingSpinner'
 import ErrorBoundary from '../components/ErrorBoundary'
-import {formatCurrency, formatPercentage} from '../services/api'
 import TickerLogo from '../components/TickerLogo'
+import StockAnalysisModal from '../components/StockAnalysisModal'
 import {Search, ChevronRight} from 'lucide-react'
 
 export default function StockAnalysis() {
@@ -22,6 +22,7 @@ export default function StockAnalysis() {
   const [error, setError] = useState('')
   const [sortColumn, setSortColumn] = useState('DELTA_VALUE')
   const [sortDirection, setSortDirection] = useState('desc')
+  const [isModalOpen, setIsModalOpen] = useState(false)
 
   useEffect(() => {
     async function fetchData() {
@@ -109,15 +110,6 @@ export default function StockAnalysis() {
     })
   }, [holdingsData, sortColumn, sortDirection])
 
-  function handleSort(column) {
-    if (sortColumn === column) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
-    } else {
-      setSortColumn(column)
-      setSortDirection('desc')
-    }
-  }
-
   async function handleAutoSelectFromSearch(ticker, company) {
     if (!selectedQuarter) {
       setError('Please select a quarter first')
@@ -132,6 +124,29 @@ export default function StockAnalysis() {
       ])
 
       setSelectedStock({TICKER: ticker, COMPANY: company})
+      setSelectedStockData(analysisResponse.data || {})
+      setHoldingsData(holdingsResponse.data || [])
+      setIsModalOpen(true)
+    } catch (err) {
+      setError(err.message || 'Failed to load stock data')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleQuarterChange(newQuarter) {
+    setSelectedQuarter(newQuarter)
+    if (!selectedStock) {
+      return
+    }
+
+    setLoading(true)
+    try {
+      const [analysisResponse, holdingsResponse] = await Promise.all([
+        getStockAnalysis(selectedStock.TICKER, newQuarter),
+        getStockHoldings(selectedStock.TICKER, newQuarter)
+      ])
+
       setSelectedStockData(analysisResponse.data || {})
       setHoldingsData(holdingsResponse.data || [])
     } catch (err) {
@@ -251,145 +266,18 @@ export default function StockAnalysis() {
             )}
           </Card>
 
-          {selectedStockData && selectedStock && (
-              <>
-                <Card>
-                  <div className="flex items-center gap-3 mb-4">
-                    <TickerLogo ticker={selectedStock.TICKER}/>
-                    <h3 className="text-lg font-semibold">
-                      {selectedStock.TICKER} ({selectedStock.COMPANY})
-                    </h3>
-                  </div>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="bg-blue-50 p-4 rounded-lg">
-                      <p className="text-sm font-medium text-blue-700">Total
-                        Value</p>
-                      <p className="text-2xl font-bold text-blue-900 mt-1">
-                        {formatCurrency(selectedStockData.TOTAL_VALUE)}
-                      </p>
-                    </div>
-                    <div className="bg-green-50 p-4 rounded-lg">
-                      <p className="text-sm font-medium text-green-700">Total
-                        Delta Value</p>
-                      <p className="text-2xl font-bold text-green-900 mt-1">
-                        {formatCurrency(
-                            selectedStockData.TOTAL_DELTA_VALUE)} {selectedStockData.DELTA_PCT
-                          ? `(${formatPercentage(selectedStockData.DELTA_PCT,
-                              2)})` : ''}
-                      </p>
-                    </div>
-                    <div className="bg-purple-50 p-4 rounded-lg">
-                      <p className="text-sm font-medium text-purple-700">Avg
-                        Portfolio %</p>
-                      <p className="text-2xl font-bold text-purple-900 mt-1">
-                        {formatPercentage(selectedStockData.AVG_PERCENTAGE, 2)}
-                      </p>
-                    </div>
-                    <div className="bg-yellow-50 p-4 rounded-lg">
-                      <p className="text-sm font-medium text-yellow-700">Holder
-                        Count</p>
-                      <p className="text-2xl font-bold text-yellow-900 mt-1">
-                        {selectedStockData.HOLDER_COUNT}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
-                    <div className="bg-red-50 p-3 rounded-lg">
-                      <p className="text-sm font-medium text-red-700">Buyers</p>
-                      <p className="text-xl font-bold text-red-900 mt-1">
-                        {selectedStockData.NUM_BUYERS} ({selectedStockData.NEW_HOLDER_COUNT} new)
-                      </p>
-                    </div>
-                    <div className="bg-green-50 p-3 rounded-lg">
-                      <p className="text-sm font-medium text-green-700">Sellers</p>
-                      <p className="text-xl font-bold text-green-900 mt-1">
-                        {selectedStockData.NUM_SELLERS} ({selectedStockData.CLOSE_COUNT} sold
-                        out)
-                      </p>
-                    </div>
-                    <div className="bg-indigo-50 p-3 rounded-lg">
-                      <p className="text-sm font-medium text-indigo-700">Max
-                        Portfolio %</p>
-                      <p className="text-xl font-bold text-indigo-900 mt-1">
-                        {formatPercentage(selectedStockData.MAX_PERCENTAGE, 2)}
-                      </p>
-                    </div>
-                    <div className="bg-pink-50 p-3 rounded-lg">
-                      <p className="text-sm font-medium text-pink-700">Buyer/Seller
-                        Ratio</p>
-                      <p className="text-xl font-bold text-pink-900 mt-1">
-                        {formatCurrency(selectedStockData.NUM_BUYERS
-                            / selectedStockData.NUM_SELLERS || 0)}
-                      </p>
-                    </div>
-                  </div>
-                </Card>
-
-                <Card>
-                  <h3 className="text-lg font-semibold mb-4">Holders by
-                    Shares</h3>
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
-                      <thead className="bg-gray-50">
-                      <tr>
-                        <th
-                            onClick={() => handleSort('DELTA_VALUE')}
-                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100 select-none"
-                        >
-                          Delta Value
-                          {sortColumn === 'DELTA_VALUE' && (
-                              <span className="ml-1">
-                            {sortDirection === 'asc' ? '↑' : '↓'}
-                          </span>
-                          )}
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                          Fund
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                          Portfolio %
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                          Shares
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                          Value
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                          Delta
-                        </th>
-                      </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
-                      {sortedBuyers.map((buyer, index) => (
-                          <tr key={index} className="hover:bg-gray-50">
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                              {formatCurrency(buyer.DELTA_VALUE)}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                              {buyer.FUND}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm">
-                              {formatPercentage(parseFloat(buyer.PORTFOLIO_PCT) || 0,
-                                  2)}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm">
-                              {(buyer.DELTA_SHARES || 0).toLocaleString()}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm">
-                              {formatCurrency(buyer.VALUE)}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm">
-                              {buyer.DELTA}
-                            </td>
-                          </tr>
-                      ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </Card>
-              </>
+          {isModalOpen && selectedStockData && selectedStock && (
+              <StockAnalysisModal
+                  stockData={{
+                    ...selectedStockData,
+                    HOLDERS: sortedBuyers
+                  }}
+                  onClose={() => setIsModalOpen(false)}
+                  open={isModalOpen}
+                  quarter={selectedQuarter}
+                  onQuarterChange={handleQuarterChange}
+                  quarters={quarters}
+              />
           )}
         </div>
       </ErrorBoundary>
