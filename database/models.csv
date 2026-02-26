@@ -11,3 +11,5 @@
 "glm_4_7_flash_q6_finance","GLM 4.7 Flash Finance","LlamaCpp"
 "qwen3_coder_next","Qwen Coder Next","LlamaCpp"
 "devstral_small_2512","Devstral Small","LlamaCpp"
+"qwen3_5_35b_a3b","Qwen3.5 35b a3b","LlamaCpp"
+"qwen3_5_27b","Qwen3.5 27b","LlamaCpp"
