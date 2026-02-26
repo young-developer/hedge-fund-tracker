@@ -22,6 +22,24 @@ export const getAllAvailableQuarters = async () => {
   return response.data || response
 }
 
+export const getStockPriceChange = async (ticker, quarter) => {
+  const params = quarter ? { quarter } : {}
+  const response = await api.get(`/api/portfolio/price/change/${ticker}`, { params })
+  return response.data || response
+}
+
+export const getPortfolioPriceChanges = async (tickers, quarter) => {
+  const params = quarter ? { tickers, quarter } : { tickers }
+  const response = await api.get('/api/portfolio/price/changes', { params })
+  return response.data || response
+}
+
+export const getPortfolioFullData = async (tickers, quarter) => {
+  const params = quarter ? { tickers, quarter } : { tickers }
+  const response = await api.get('/api/portfolio/full-data', { params })
+  return response.data || response
+}
+
 export const getPortfolioFromStorage = () => {
   try {
     const data = localStorage.getItem('portfolio')

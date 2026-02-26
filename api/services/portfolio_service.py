@@ -3,10 +3,13 @@ Portfolio service for API - provides portfolio management and stock recommendati
 """
 from app.analysis.stocks import get_quarter_data, _aggregate_stock_data, _calculate_derived_metrics, aggregate_quarter_by_fund
 from app.utils.database import load_stocks, get_last_quarter
+from app.utils.strings import get_quarter_date
+from app.stocks.price_fetcher import PriceFetcher
 from api.utils.cache import cached
 from typing import Any
 import pandas as pd
 import numpy as np
+from datetime import datetime, date
 
 
 def calculate_recommendation_score(df_analysis: pd.DataFrame) -> dict[str, Any]:
@@ -221,3 +224,233 @@ def get_stock_holders(ticker: str, quarter: str = None) -> pd.DataFrame:
         return aggregate_quarter_by_fund(stock_df)
     except Exception as e:
         return pd.DataFrame()
+
+
+@cached(ttl_seconds=3600, key_prefix="price_date_")
+def get_stock_price_by_date(ticker: str, date_str: str) -> dict[str, Any]:
+    """
+    Gets the price for a stock on a specific date.
+
+    Uses PriceFetcher.get_avg_price() which returns the average of High and Low prices.
+    Supports international tickers with fallback suffixes (TSX, TSXV).
+
+    Args:
+        ticker (str): Stock ticker symbol.
+        date_str (str): Date string in 'YYYY-MM-DD' format.
+
+    Returns:
+        dict: Price information with ticker, date, price, and price type.
+              Returns {'error': 'error message'} if price cannot be retrieved.
+    """
+    try:
+        ticker_upper = ticker.upper()
+
+        if not date_str:
+            return {
+                'error': 'Date string is required'
+            }
+
+        try:
+            date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
+        except ValueError:
+            return {
+                'error': f'Invalid date format. Expected YYYY-MM-DD, got: {date_str}'
+            }
+
+        price = PriceFetcher.get_avg_price(ticker_upper, date_obj)
+
+        if price is None:
+            return {
+                'error': f'Price not found for {ticker_upper} on {date_str}'
+            }
+
+        return {
+            'ticker': ticker_upper,
+            'date': date_str,
+            'price': float(price),
+            'price_type': 'average',
+            'note': 'Price is (High + Low) / 2'
+        }
+    except Exception as e:
+        return {
+            'error': str(e)
+        }
+
+
+@cached(ttl_seconds=3600, key_prefix="price_quarter_")
+def get_stock_price_by_quarter(ticker: str, quarter: str) -> dict[str, Any]:
+    """
+    Gets the price for a stock at quarter-end (when funds report).
+
+    Uses PriceFetcher.get_avg_price() which returns the average of High and Low prices.
+    Supports international tickers with fallback suffixes (TSX, TSXV).
+
+    Args:
+        ticker (str): Stock ticker symbol.
+        quarter (str): Quarter in 'YYYYQN' format.
+
+    Returns:
+        dict: Price information with ticker, quarter, quarter-end date, price, and price type.
+              Returns {'error': 'error message'} if price cannot be retrieved.
+    """
+    try:
+        ticker_upper = ticker.upper()
+
+        if not quarter:
+            return {
+                'error': 'Quarter is required'
+            }
+
+        try:
+            quarter_end_date = get_quarter_date(quarter)
+        except Exception as e:
+            return {
+                'error': f'Invalid quarter format. Expected YYYYQN, got: {quarter}'
+            }
+
+        price = PriceFetcher.get_avg_price(ticker_upper, date.fromisoformat(quarter_end_date))
+
+        if price is None:
+            return {
+                'error': f'Price not found for {ticker_upper} in {quarter} (quarter-end: {quarter_end_date})'
+            }
+
+        return {
+            'ticker': ticker_upper,
+            'quarter': quarter,
+            'quarter_end_date': quarter_end_date,
+            'price': float(price),
+            'price_type': 'average',
+            'note': 'Price is (High + Low) / 2'
+        }
+    except Exception as e:
+        return {
+            'error': str(e)
+        }
+
+
+@cached(ttl_seconds=3600, key_prefix="price_pnl_")
+def get_stock_price_change(ticker: str, quarter: str = None) -> dict[str, Any]:
+    """
+    Calculates the percentage change between current price and reported quarter price.
+
+    Uses PriceFetcher.get_avg_price() which returns the average of High and Low prices.
+    Supports international tickers with fallback suffixes (TSX, TSXV).
+
+    Args:
+        ticker (str): Stock ticker symbol.
+        quarter (str, optional): Quarter in 'YYYYQN' format. Defaults to last quarter.
+
+    Returns:
+        dict: Price change information with ticker, current price, reported price, 
+              percentage change, and price change. Returns {'error': 'error message'} if 
+              price cannot be retrieved.
+    """
+    try:
+        ticker_upper = ticker.upper()
+
+        if quarter is None:
+            quarter = get_last_quarter()
+
+        try:
+            quarter_end_date = get_quarter_date(quarter)
+        except Exception as e:
+            return {
+                'error': f'Invalid quarter format. Expected YYYYQN, got: {quarter}'
+            }
+
+        reported_price = PriceFetcher.get_avg_price(ticker_upper, date.fromisoformat(quarter_end_date))
+        current_price = PriceFetcher.get_current_price(ticker_upper)
+
+        if reported_price is None:
+            return {
+                'error': f'Reported price not found for {ticker_upper} in {quarter} (quarter-end: {quarter_end_date})'
+            }
+
+        if current_price is None:
+            return {
+                'error': f'Current price not found for {ticker_upper}'
+            }
+
+        price_change_pct = ((current_price - reported_price) / reported_price) * 100
+
+        return {
+            'ticker': ticker_upper,
+            'reported_price': float(reported_price),
+            'current_price': float(current_price),
+            'price_change': float(price_change_pct),
+            'quarter': quarter,
+            'quarter_end_date': quarter_end_date,
+            'price_type': 'average',
+            'note': 'Prices are (High + Low) / 2'
+        }
+    except Exception as e:
+        return {
+            'error': str(e)
+        }
+
+
+def get_portfolio_price_changes(tickers: list[str], quarter: str = None) -> list[dict[str, Any]]:
+    """
+    Gets price change data for multiple portfolio stocks in a single request.
+
+    Args:
+        tickers (list): List of stock tickers.
+        quarter (str, optional): Quarter in 'YYYYQN' format. Defaults to last quarter.
+
+    Returns:
+        list: List of price change information dictionaries. Returns empty list if 
+              no tickers provided or if all requests fail.
+    """
+    if not tickers:
+        return []
+
+    try:
+        if quarter is None:
+            quarter = get_last_quarter()
+
+        results = []
+        for ticker in tickers:
+            price_change = get_stock_price_change(ticker, quarter)
+            if 'error' not in price_change:
+                results.append(price_change)
+
+        return results
+    except Exception as e:
+        return []
+
+
+def get_portfolio_full_data(tickers: list[str], quarter: str = None) -> list[dict[str, Any]]:
+    """
+    Gets both recommendation and price change data for multiple portfolio stocks in a single request.
+
+    Args:
+        tickers (list): List of stock tickers.
+        quarter (str, optional): Quarter in 'YYYYQN' format. Defaults to last quarter.
+
+    Returns:
+        list: List of dictionaries containing both recommendation and price change data.
+              Returns empty list if no tickers provided or if all requests fail.
+    """
+    if not tickers:
+        return []
+
+    try:
+        if quarter is None:
+            quarter = get_last_quarter()
+
+        results = []
+        for ticker in tickers:
+            recommendation = get_stock_recommendation(ticker, quarter)
+            price_change = get_stock_price_change(ticker, quarter)
+
+            combined = {
+                'ticker': ticker.upper(),
+                'recommendation': recommendation if 'error' not in recommendation else None,
+                'price_change': price_change if 'error' not in price_change else None
+            }
+            results.append(combined)
+
+        return results
+    except Exception as e:
+        return []

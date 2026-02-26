@@ -3,10 +3,16 @@ import StockActionModal from './StockActionModal'
 import {useState} from 'react'
 import {getRecommendationColorClass} from '../utils/score-colors'
 
-export default function PortfolioTile({stock, analysis}) {
+export default function PortfolioTile({stock, analysis, priceChange}) {
   const [showModal, setShowModal] = useState(false)
   const recommendation = analysis?.[stock.ticker] || { label: 'N/A', confidence: 0, reasoning: 'No data' }
   const recommendationClass = getRecommendationColorClass(recommendation.label)
+
+  console.log('PortfolioTile rendering for', stock.ticker, 'with priceChange:', priceChange)
+
+  const priceChangeClass = priceChange?.price_change ? (
+    priceChange.price_change > 0 ? 'text-green-600' : priceChange.price_change < 0 ? 'text-red-600' : 'text-gray-600'
+  ) : 'text-gray-400'
 
   return (
       <>
@@ -47,10 +53,18 @@ export default function PortfolioTile({stock, analysis}) {
                   </span>
                 </div>
             )}
+            {priceChange && priceChange.price_change !== undefined && priceChange.price_change !== null && (
+                <div className="flex items-center justify-center gap-1 text-xs mb-2">
+                  <span className={`font-medium ${priceChangeClass}`}>
+                    {priceChange.price_change > 0 ? '+' : ''}{priceChange.price_change.toFixed(2)}%
+                  </span>
+                </div>
+            )}
           </div>
         </div>
         {showModal && (
             <StockActionModal stock={stock} recommendation={recommendation}
+                              priceChange={priceChange}
                               onClose={() => setShowModal(false)}/>
         )}
       </>

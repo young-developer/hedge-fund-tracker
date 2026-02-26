@@ -2,7 +2,7 @@ import {X, TrendingUp, TrendingDown, DollarSign} from 'lucide-react'
 import {useNavigate} from 'react-router-dom'
 import {getRecommendationColorClass} from '../utils/score-colors'
 
-export default function StockActionModal({stock, recommendation, onClose}) {
+export default function StockActionModal({stock, recommendation, priceChange, onClose}) {
   const navigate = useNavigate()
 
   const handleTradingView = () => {
@@ -18,6 +18,10 @@ export default function StockActionModal({stock, recommendation, onClose}) {
   }
 
   const recommendationClass = getRecommendationColorClass(recommendation?.label)
+
+  const priceChangeClass = priceChange?.price_change ? (
+    priceChange.price_change > 0 ? 'text-green-600' : priceChange.price_change < 0 ? 'text-red-600' : 'text-gray-600'
+  ) : 'text-gray-400'
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={onClose}>
@@ -83,6 +87,27 @@ export default function StockActionModal({stock, recommendation, onClose}) {
                     <p>{recommendation.reasoning}</p>
                   </div>
               )}
+            </div>
+        )}
+
+        {priceChange && priceChange.price_change !== undefined && priceChange.price_change !== null && (
+            <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-sm font-medium text-gray-700">Price Change</span>
+                <span className={`px-2 py-1 rounded-full text-xs font-medium border ${priceChangeClass}`}>
+                  {priceChange.price_change > 0 ? '+' : ''}{priceChange.price_change.toFixed(2)}%
+                </span>
+              </div>
+              <div className="text-sm text-gray-600">
+                <div className="flex justify-between">
+                  <span>Reported (${priceChange.quarter}):</span>
+                  <span>${priceChange.reported_price.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Current:</span>
+                  <span>${priceChange.current_price.toFixed(2)}</span>
+                </div>
+              </div>
             </div>
         )}
 

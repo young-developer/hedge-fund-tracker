@@ -4,7 +4,7 @@ import {getRecentFilings as getFilings} from '../api/filings'
 import {getAIAnalystReportsByQuarter, getAIAnalystReport} from '../api/ai'
 import {
   getPortfolioFromStorage,
-  getStockRecommendation,
+  getPortfolioFullData,
 } from '../api/portfolio'
 import {Brain} from 'lucide-react'
 import {Select} from 'antd'
@@ -23,6 +23,7 @@ export default function Home() {
   const [aiReports, setAiReports] = useState([])
   const [portfolio, setPortfolio] = useState([])
   const [portfolioAnalysis, setPortfolioAnalysis] = useState({})
+  const [portfolioPriceChanges, setPortfolioPriceChanges] = useState({})
   const [selectedReport, setSelectedReport] = useState(null)
   const [aiReport, setAiReport] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -72,33 +73,37 @@ export default function Home() {
         const portfolioData = getPortfolioFromStorage()
         setPortfolio(portfolioData)
 
-        // Load portfolio analysis for latest quarter
+        // Load portfolio data for latest quarter
         const latestQuarter = quartersData.data?.[0]
         if (portfolioData.length > 0 && latestQuarter) {
           try {
             setPortfolioLoading(true)
-            const analysisPromises = portfolioData.map(stock =>
-                getStockRecommendation(stock.ticker, latestQuarter)
-            )
 
-            const analysisResults = await Promise.all(analysisPromises)
+            const tickerList = portfolioData.map(stock => stock.ticker)
+
+            const portfolioResponse = await getPortfolioFullData(
+                tickerList.join(','), latestQuarter)
 
             const analysisMap = {}
-            analysisResults.forEach((result, index) => {
-              if (result) {
-                analysisMap[portfolioData[index].ticker] = result
-              } else {
-                analysisMap[portfolioData[index].ticker] = {
-                  label: 'N/A',
-                  confidence: 0,
-                  reasoning: 'No data'
+            const priceChangeMap = {}
+
+            if (portfolioResponse && Array.isArray(
+                portfolioResponse)) {
+              console.log(portfolioResponse)
+              portfolioResponse.forEach(item => {
+                if (item.recommendation) {
+                  analysisMap[item.ticker] = item.recommendation
                 }
-              }
-              console.log(analysisMap);
-            })
+                if (item.price_change) {
+                  priceChangeMap[item.ticker] = item.price_change
+                }
+              })
+            }
+
             setPortfolioAnalysis(analysisMap)
+            setPortfolioPriceChanges(priceChangeMap)
           } catch (error) {
-            console.error('Error loading portfolio analysis:', error)
+            console.error('Error loading portfolio data:', error)
           } finally {
             setPortfolioLoading(false)
           }
@@ -172,7 +177,8 @@ export default function Home() {
                     {portfolio.map((stock) => {
                       return (
                           <PortfolioTile key={stock.ticker} stock={stock}
-                                         analysis={portfolioAnalysis}/>
+                                         analysis={portfolioAnalysis}
+                                         priceChange={portfolioPriceChanges[stock.ticker]}/>
                       )
                     })}
                   </div>
