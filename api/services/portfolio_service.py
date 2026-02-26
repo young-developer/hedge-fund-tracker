@@ -3,6 +3,7 @@ Portfolio service for API - provides portfolio management and stock recommendati
 """
 from app.analysis.stocks import get_quarter_data, _aggregate_stock_data, _calculate_derived_metrics, aggregate_quarter_by_fund
 from app.utils.database import load_stocks, get_last_quarter
+from api.utils.cache import cached
 from typing import Any
 import pandas as pd
 import numpy as np
@@ -88,6 +89,20 @@ def calculate_recommendation_score(df_analysis: pd.DataFrame) -> dict[str, Any]:
     }
 
 
+@cached(ttl_seconds=3600, key_prefix="portfolio_")
+def get_quarter_data_cached(quarter: str) -> pd.DataFrame:
+    """
+    Cached wrapper for get_quarter_data with 1-hour TTL.
+
+    Args:
+        quarter (str): Quarter in 'YYYYQN' format.
+
+    Returns:
+        pd.DataFrame: Quarterly data for the specified quarter.
+    """
+    return get_quarter_data(quarter)
+
+
 def get_stock_recommendation(ticker: str, quarter: str = None) -> dict[str, Any]:
     """
     Gets a BUY/SELL/HOLD recommendation for a specific stock.
@@ -103,7 +118,7 @@ def get_stock_recommendation(ticker: str, quarter: str = None) -> dict[str, Any]
         if quarter is None:
             quarter = get_last_quarter()
 
-        df = get_quarter_data(quarter)
+        df = get_quarter_data_cached(quarter)
         stock_df = df[df['Ticker'] == ticker.upper()]
 
         if stock_df.empty:
@@ -197,7 +212,7 @@ def get_stock_holders(ticker: str, quarter: str = None) -> pd.DataFrame:
         if quarter is None:
             quarter = get_last_quarter()
 
-        df = get_quarter_data(quarter)
+        df = get_quarter_data_cached(quarter)
         stock_df = df[df['Ticker'] == ticker.upper()]
 
         if stock_df.empty:
