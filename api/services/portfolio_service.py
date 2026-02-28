@@ -11,13 +11,13 @@ import pandas as pd
 import numpy as np
 from datetime import datetime, date
 
-
-def calculate_recommendation_score(df_analysis: pd.DataFrame) -> dict[str, Any]:
+def calculate_recommendation_score(df_analysis: pd.DataFrame, price_change_pct: float | None = None) -> dict[str, Any]:
     """
-    Calculates a BUY/SELL/HOLD recommendation based on institutional activity.
+    Calculates a BUY/SELL/HOLD recommendation based on institutional activity and stock price change.
 
     Args:
         df_analysis (pd.DataFrame): Stock analysis DataFrame with aggregated fund data.
+        price_change_pct (float, optional): Percentage change in stock price. Defaults to None.
 
     Returns:
         dict: Recommendation with label and reasoning.
@@ -70,6 +70,19 @@ def calculate_recommendation_score(df_analysis: pd.DataFrame) -> dict[str, Any]:
             score += 20
             reasoning.append(f"Large position growth: ${delta_value/1_000_000:.1f}M")
 
+    if price_change_pct is not None:
+        price_weight = 0.15
+        price_threshold = 3.0
+
+        if price_change_pct > price_threshold:
+            price_score = min(price_change_pct * 1.5, 15)
+            score += price_score
+            reasoning.append(f"Price up {price_change_pct:.1f}%")
+        elif price_change_pct < -price_threshold:
+            price_score = min(abs(price_change_pct) * 1.5, 15)
+            score -= price_score
+            reasoning.append(f"Price down {abs(price_change_pct):.1f}%")
+
     label = 'HOLD'
     if score >= 60:
         label = 'BUY'
@@ -88,7 +101,8 @@ def calculate_recommendation_score(df_analysis: pd.DataFrame) -> dict[str, Any]:
         'delta_pct': float(delta_pct),
         'net_buyers': int(net_buyers),
         'buyer_count': int(buyer_count),
-        'seller_count': int(seller_count)
+        'seller_count': int(seller_count),
+        'price_change': float(price_change_pct) if price_change_pct is not None else None
     }
 
 
@@ -151,16 +165,22 @@ def get_stock_recommendation(ticker: str, quarter: str = None) -> dict[str, Any]
 
         net_buyers = buyer_count - seller_count
 
-        recommendation = calculate_recommendation_score(pd.DataFrame({
-            'Total_Value': [total_value],
-            'Total_Delta_Value': [delta_value],
-            'Net_Buyers': [net_buyers],
-            'Buyer_Count': [buyer_count],
-            'Seller_Count': [seller_count],
-            'Holder_Count': [(shares > 0).sum()],
-            'New_Holder_Count': [new_holders],
-            'Close_Count': [closed_holders]
-        }))
+        price_change_info = get_stock_price_change(ticker, quarter)
+        price_change_pct = price_change_info.get('price_change')
+
+        recommendation = calculate_recommendation_score(
+            pd.DataFrame({
+                'Total_Value': [total_value],
+                'Total_Delta_Value': [delta_value],
+                'Net_Buyers': [net_buyers],
+                'Buyer_Count': [buyer_count],
+                'Seller_Count': [seller_count],
+                'Holder_Count': [(shares > 0).sum()],
+                'New_Holder_Count': [new_holders],
+                'Close_Count': [closed_holders]
+            }),
+            price_change_pct=price_change_pct
+        )
 
         recommendation['ticker'] = ticker.upper()
         recommendation['company'] = stock_df.iloc[0]['Company']

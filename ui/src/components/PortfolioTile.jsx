@@ -17,36 +17,24 @@ export default function PortfolioTile({stock, analysis, priceChange}) {
   return (
       <>
         <div
-            className="bg-white border border-gray-200 rounded-lg p-3 sm:p-4 hover:shadow-md transition-shadow cursor-pointer"
+            className={`${recommendationClass} rounded-lg p-2 sm:p-3 hover:shadow-md transition-shadow cursor-pointer`}
             onClick={() => setShowModal(true)}>
           <div className="flex flex-col items-center text-center">
-            <div className="mb-2">
+            <div className="mb-1">
               <TickerLogo ticker={stock.ticker}/>
             </div>
             <div
-                className="font-bold text-sm sm:text-base mb-1">{stock.ticker}</div>
-            <div className="text-xs sm:text-sm text-gray-600 mb-2 line-clamp-2">
+                className="font-bold text-xs sm:text-sm mb-0.5">{stock.ticker}</div>
+            <div className="text-xs text-gray-600 mb-1 line-clamp-2">
               {stock.company}
             </div>
-            {recommendation.label && recommendation.label !== 'N/A' && (
-                <div className="mb-2">
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium border ${recommendationClass}`}>
-                    {recommendation.label}
-                  </span>
-                </div>
-            )}
-            {recommendation.confidence !== undefined && recommendation.confidence > 0 && (
-                <div className="text-xs text-gray-600 mb-2">
-                  {Math.round(recommendation.confidence * 100)}% confidence
-                </div>
-            )}
             {recommendation.total_value !== undefined && (
-                <div className="text-xs text-gray-600 mb-2">
+                <div className="text-[10px] sm:text-xs text-gray-600 mb-1">
                   ${recommendation.total_value.toLocaleString(undefined, {maximumFractionDigits: 0})}
                 </div>
             )}
             {recommendation.delta_value !== undefined && (
-                <div className="flex items-center justify-center gap-1 text-xs text-gray-600 mb-2">
+                <div className="flex items-center justify-center gap-1 text-[10px] sm:text-xs text-gray-600 mb-1">
                   {recommendation.delta_value > 0 ? '↗' : recommendation.delta_value < 0 ? '↘' : '→'}
                   <span>
                     ${recommendation.delta_value.toLocaleString(undefined, {maximumFractionDigits: 0})}
@@ -54,7 +42,7 @@ export default function PortfolioTile({stock, analysis, priceChange}) {
                 </div>
             )}
             {priceChange && priceChange.price_change !== undefined && priceChange.price_change !== null && (
-                <div className="flex items-center justify-center gap-1 text-xs mb-2">
+                <div className="flex items-center justify-center gap-1 text-[10px] sm:text-xs mb-1">
                   <span className={`font-medium ${priceChangeClass}`}>
                     {priceChange.price_change > 0 ? '+' : ''}{priceChange.price_change.toFixed(2)}%
                   </span>

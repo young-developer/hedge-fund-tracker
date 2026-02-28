@@ -171,18 +171,24 @@ export default function Home() {
                   <LoadingSpinner message="Loading portfolio analysis..."/>
               )}
 
-              {!portfolioLoading && (
-                  <div
-                      className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-3">
-                    {portfolio.map((stock) => {
-                      return (
-                          <PortfolioTile key={stock.ticker} stock={stock}
-                                         analysis={portfolioAnalysis}
-                                         priceChange={portfolioPriceChanges[stock.ticker]}/>
-                      )
-                    })}
-                  </div>
-              )}
+               {!portfolioLoading && (
+                   <div
+                       className="grid grid-cols-2 sm:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-1 sm:gap-2">
+                     {portfolio
+                       .sort((a, b) => {
+                         const deltaA = portfolioPriceChanges[a.ticker]?.price_change || 0
+                         const deltaB = portfolioPriceChanges[b.ticker]?.price_change || 0
+                         return deltaB - deltaA
+                       })
+                       .map((stock) => {
+                       return (
+                           <PortfolioTile key={stock.ticker} stock={stock}
+                                          analysis={portfolioAnalysis}
+                                          priceChange={portfolioPriceChanges[stock.ticker]}/>
+                       )
+                     })}
+                   </div>
+               )}
 
               <div className="mt-3 sm:mt-4 text-center">
                 <a

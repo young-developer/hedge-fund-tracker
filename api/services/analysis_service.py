@@ -4,8 +4,12 @@ Analysis service for API - wraps quarterly analysis functions.
 from app.analysis.stocks import quarter_analysis
 from app.utils.database import get_all_quarters, get_last_quarter, \
     count_funds_in_quarter
+from app.stocks.price_fetcher import PriceFetcher
+from app.utils.strings import get_quarter_date
+from api.utils.cache import cached
 from typing import Any, Dict
 import numpy as np
+from datetime import datetime, date
 
 
 class AnalysisService:
@@ -42,7 +46,8 @@ class AnalysisService:
                     'TOP_NEW_CONSENSUS': [],
                     'TOP_INCREASING_POSITIONS': [],
                     'TOP_BETS': [],
-                    'AVERAGE_PORTFOLIO': []
+                    'AVERAGE_PORTFOLIO': [],
+                    'TOP_SELLS': []
                 }
             top_n = 15
             min_holder_threshold = round(count_funds_in_quarter(quarter) / 10)
@@ -53,6 +58,25 @@ class AnalysisService:
             top_bets = df.sort_values(by='Max_Portfolio_Pct', ascending=False).head(top_n)
             average_portfolio = df[df['Holder_Count'] >= min_holder_threshold].sort_values(by='Avg_Portfolio_Pct', ascending=False).head(top_n)
             top_sells = df.sort_values(by=['Net_Buyers', 'Seller_Count', 'Total_Delta_Value'], ascending=True).head(top_n)
+
+            top_n_stocks = set(top_buys['Ticker'].tolist() + top_new_consensus['Ticker'].tolist() +
+                             top_increasing_positions['Ticker'].tolist() + top_bets['Ticker'].tolist() +
+                             average_portfolio['Ticker'].tolist() + top_sells['Ticker'].tolist())
+
+            for ticker in top_n_stocks:
+                try:
+                    price_change = AnalysisService.get_stock_price_change(ticker, quarter)
+                    if 'error' not in price_change:
+                        price_change_pct = price_change.get('price_change')
+                        for section in [top_buys, top_new_consensus, top_increasing_positions,
+                                      top_bets, average_portfolio, top_sells]:
+                            stock_mask = section['Ticker'] == ticker
+                            if stock_mask.any():
+                                section.loc[stock_mask, 'price_change'] = price_change_pct
+                                section.loc[stock_mask, 'current_price'] = price_change.get('current_price')
+                                section.loc[stock_mask, 'reported_price'] = price_change.get('reported_price')
+                except Exception:
+                    continue
 
             return {
                 'QUARTER': quarter,
@@ -176,3 +200,66 @@ class AnalysisService:
             list: All available quarters.
         """
         return get_all_quarters()
+
+
+    @cached(ttl_seconds=3600, key_prefix="price_quarter_analysis_")
+    def get_stock_price_change(ticker: str, quarter: str) -> dict[str, Any]:
+        """
+        Calculates the percentage change between current price and reported quarter price.
+
+        Uses PriceFetcher.get_avg_price() which returns the average of High and Low prices.
+        Supports international tickers with fallback suffixes (TSX, TSXV).
+
+        Args:
+            ticker (str): Stock ticker symbol.
+            quarter (str): Quarter in 'YYYYQN' format.
+
+        Returns:
+            dict: Price change information with ticker, current price, reported price, 
+                  percentage change, and price change. Returns {'error': 'error message'} if 
+                  price cannot be retrieved.
+        """
+        try:
+            ticker_upper = ticker.upper()
+
+            if not quarter:
+                return {
+                    'error': 'Quarter is required'
+                }
+
+            try:
+                quarter_end_date = get_quarter_date(quarter)
+            except Exception as e:
+                return {
+                    'error': f'Invalid quarter format. Expected YYYYQN, got: {quarter}'
+                }
+
+            reported_price = PriceFetcher.get_avg_price(ticker_upper, date.fromisoformat(quarter_end_date))
+            current_price = PriceFetcher.get_current_price(ticker_upper)
+
+            if reported_price is None:
+                return {
+                    'error': f'Reported price not found for {ticker_upper} in {quarter} (quarter-end: {quarter_end_date})'
+                }
+
+            if current_price is None:
+                return {
+                    'error': f'Current price not found for {ticker_upper}'
+                }
+
+            price_change_pct = ((current_price - reported_price) / reported_price) * 100
+
+            return {
+                'ticker': ticker_upper,
+                'reported_price': float(reported_price),
+                'current_price': float(current_price),
+                'price_change': float(price_change_pct),
+                'quarter': quarter,
+                'quarter_end_date': quarter_end_date,
+                'price_type': 'average',
+                'note': 'Prices are (High + Low) / 2'
+            }
+        except Exception as e:
+            return {
+                'error': str(e)
+            }

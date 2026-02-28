@@ -121,6 +121,11 @@ export default function QuarterAnalysis() {
           if (col.key === 'Total_Delta_Value' || col.key === 'Total_Value' || col.key === 'Total_Delta_Value') {
             return formatValue(value)
           }
+          if (col.key === 'price_change') {
+            const formatted = formatPercentage(value)
+            const colorClass = value > 0 ? 'text-green-600' : value < 0 ? 'text-red-600' : 'text-gray-600'
+            return <span className={colorClass}>{formatted}</span>
+          }
         }
         return value
       },
@@ -140,21 +145,22 @@ export default function QuarterAnalysis() {
           Consensus Buys
         </span>
       ),
-       children: analysis?.TOP_BUYS && analysis.TOP_BUYS.length > 0 && (
-           <div
-               className="overflow-x-auto -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
-             <AntdTable
-                 columns={getColumns([
-                   {key: 'Ticker', header: 'Ticker'},
-                   {key: 'Company', header: 'Company'},
-                   {key: 'Delta', header: 'Delta'},
-                   {key: 'Net_Buyers', header: 'Net_Buyers'},
-                   {key: 'Buyer_Count', header: 'Buyer_Count'},
-                   {key: 'Seller_Count', header: 'Seller_Count'},
-                   {key: 'Holder_Count', header: 'Holder_Count'},
-                   {key: 'Total_Delta_Value', header: 'Total Delta Value'}
-                 ], 'TOP_BUYS')}
-                dataSource={getSortedData(analysis.TOP_BUYS, 'TOP_BUYS')}
+      children: analysis?.TOP_BUYS && analysis.TOP_BUYS.length > 0 && (
+            <div
+                className="overflow-x-auto -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+              <AntdTable
+                  columns={getColumns([
+                    {key: 'Ticker', header: 'Ticker'},
+                    {key: 'Company', header: 'Company'},
+                    {key: 'price_change', header: 'Price Change %'},
+                    {key: 'Delta', header: 'Delta'},
+                    {key: 'Net_Buyers', header: 'Net_Buyers'},
+                    {key: 'Buyer_Count', header: 'Buyer_Count'},
+                    {key: 'Seller_Count', header: 'Seller_Count'},
+                    {key: 'Holder_Count', header: 'Holder_Count'},
+                    {key: 'Total_Delta_Value', header: 'Total Delta Value'}
+                  ], 'TOP_BUYS')}
+                 dataSource={getSortedData(analysis.TOP_BUYS, 'TOP_BUYS')}
                 rowKey={(record) => record.Ticker}
                 size="small"
                 pagination={false}
@@ -176,23 +182,24 @@ export default function QuarterAnalysis() {
           New Consensus
         </span>
       ),
-       children: analysis?.TOP_NEW_CONSENSUS && analysis.TOP_NEW_CONSENSUS.length
-           > 0 && (
-               <div
-                   className="overflow-x-auto -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
-                 <AntdTable
-                     columns={getColumns([
-                       {key: 'Ticker', header: 'Ticker'},
-                       {key: 'Company', header: 'Company'},
-                       {key: 'New_Holder_Count', header: 'New Holder Count'},
-                       {key: 'Net_Buyers', header: 'Net Buyers'},
-                       {key: 'Holder_Count', header: 'Holder Count'},
-                       {key: 'Delta', header: 'Delta'},
-                       {key: 'Total_Delta_Value', header: 'Total Delta Value'},
-                       {key: 'Total_Value', header: 'Total Value'}
-                     ], 'TOP_NEW_CONSENSUS')}
-                    dataSource={getSortedData(analysis.TOP_NEW_CONSENSUS,
-                        'TOP_NEW_CONSENSUS')}
+        children: analysis?.TOP_NEW_CONSENSUS && analysis.TOP_NEW_CONSENSUS.length
+            > 0 && (
+                <div
+                    className="overflow-x-auto -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+                  <AntdTable
+                      columns={getColumns([
+                        {key: 'Ticker', header: 'Ticker'},
+                        {key: 'Company', header: 'Company'},
+                        {key: 'price_change', header: 'Price Change %'},
+                        {key: 'New_Holder_Count', header: 'New Holder Count'},
+                        {key: 'Net_Buyers', header: 'Net Buyers'},
+                        {key: 'Holder_Count', header: 'Holder Count'},
+                        {key: 'Delta', header: 'Delta'},
+                        {key: 'Total_Delta_Value', header: 'Total Delta Value'},
+                        {key: 'Total_Value', header: 'Total Value'}
+                      ], 'TOP_NEW_CONSENSUS')}
+                     dataSource={getSortedData(analysis.TOP_NEW_CONSENSUS,
+                         'TOP_NEW_CONSENSUS')}
                     rowKey={(record) => record.Ticker}
                     size="small"
                     pagination={false}
@@ -214,23 +221,24 @@ export default function QuarterAnalysis() {
           Increasing Positions
         </span>
       ),
-       children: analysis?.TOP_INCREASING_POSITIONS
-           && analysis.TOP_INCREASING_POSITIONS.length > 0 && (
-               <div
-                   className="overflow-x-auto -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
-                 <AntdTable
-                     columns={getColumns([
-                       {key: 'Ticker', header: 'Ticker'},
-                       {key: 'Company', header: 'Company'},
-                       {key: 'New_Holder_Count', header: 'New Holder Count'},
-                       {key: 'Net_Buyers', header: 'Net Buyers'},
-                       {key: 'Holder_Count', header: 'Holder Count'},
-                       {key: 'Delta', header: 'Delta'},
-                       {key: 'Total_Delta_Value', header: 'Total Delta Value'},
-                       {key: 'Total_Value', header: 'Total Value'}
-                     ], 'TOP_INCREASING_POSITIONS')}
-                    dataSource={getSortedData(analysis.TOP_INCREASING_POSITIONS,
-                        'TOP_INCREASING_POSITIONS')}
+        children: analysis?.TOP_INCREASING_POSITIONS
+            && analysis.TOP_INCREASING_POSITIONS.length > 0 && (
+                <div
+                    className="overflow-x-auto -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+                  <AntdTable
+                      columns={getColumns([
+                        {key: 'Ticker', header: 'Ticker'},
+                        {key: 'Company', header: 'Company'},
+                        {key: 'price_change', header: 'Price Change %'},
+                        {key: 'New_Holder_Count', header: 'New Holder Count'},
+                        {key: 'Net_Buyers', header: 'Net Buyers'},
+                        {key: 'Holder_Count', header: 'Holder Count'},
+                        {key: 'Delta', header: 'Delta'},
+                        {key: 'Total_Delta_Value', header: 'Total Delta Value'},
+                        {key: 'Total_Value', header: 'Total Value'}
+                      ], 'TOP_INCREASING_POSITIONS')}
+                     dataSource={getSortedData(analysis.TOP_INCREASING_POSITIONS,
+                         'TOP_INCREASING_POSITIONS')}
                     rowKey={(record) => record.Ticker}
                     size="small"
                     pagination={false}
@@ -252,20 +260,21 @@ export default function QuarterAnalysis() {
            Big Bets
          </span>
        ),
-       children: analysis?.TOP_BETS && analysis.TOP_BETS.length > 0 && (
-           <div
-               className="overflow-x-auto -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
-             <AntdTable
-                 columns={getColumns([
-                   {key: 'Ticker', header: 'Ticker'},
-                   {key: 'Company', header: 'Company'},
-                   {key: 'Max_Portfolio_Pct', header: 'Max Portfolio %'},
-                   {key: 'Avg_Portfolio_Pct', header: 'Avg Portfolio %'},
-                   {key: 'Delta', header: 'Delta'},
-                   {key: 'Total_Delta_Value', header: 'Total Delta Value'},
-                   {key: 'Total_Value', header: 'Total Value'}
-                 ], 'TOP_BETS')}
-                dataSource={getSortedData(analysis.TOP_BETS, 'TOP_BETS')}
+        children: analysis?.TOP_BETS && analysis.TOP_BETS.length > 0 && (
+            <div
+                className="overflow-x-auto -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+              <AntdTable
+                  columns={getColumns([
+                    {key: 'Ticker', header: 'Ticker'},
+                    {key: 'Company', header: 'Company'},
+                    {key: 'price_change', header: 'Price Change %'},
+                    {key: 'Max_Portfolio_Pct', header: 'Max Portfolio %'},
+                    {key: 'Avg_Portfolio_Pct', header: 'Avg Portfolio %'},
+                    {key: 'Delta', header: 'Delta'},
+                    {key: 'Total_Delta_Value', header: 'Total Delta Value'},
+                    {key: 'Total_Value', header: 'Total Value'}
+                  ], 'TOP_BETS')}
+                 dataSource={getSortedData(analysis.TOP_BETS, 'TOP_BETS')}
                 rowKey={(record) => record.Ticker}
                 size="small"
                 pagination={false}
@@ -287,22 +296,23 @@ export default function QuarterAnalysis() {
            Average Portfolio
          </span>
        ),
-        children: analysis?.AVERAGE_PORTFOLIO && analysis.AVERAGE_PORTFOLIO.length
-            > 0 && (
-                <div
-                    className="overflow-x-auto -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
-                   <AntdTable
-                       columns={getColumns([
-                         {key: 'Ticker', header: 'Ticker'},
-                         {key: 'Company', header: 'Company'},
-                         {key: 'Avg_Portfolio_Pct', header: 'Avg Portfolio %'},
-                         {key: 'Max_Portfolio_Pct', header: 'Max Portfolio %'},
-                         {key: 'Holder_Count', header: 'Holder Count'},
-                         {key: 'Delta', header: 'Delta'},
-                         {key: 'Total_Value', header: 'Total Value'}
-                       ], 'AVERAGE_PORTFOLIO')}
-                     dataSource={getSortedData(analysis.AVERAGE_PORTFOLIO,
-                         'AVERAGE_PORTFOLIO')}
+         children: analysis?.AVERAGE_PORTFOLIO && analysis.AVERAGE_PORTFOLIO.length
+             > 0 && (
+                 <div
+                     className="overflow-x-auto -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+                    <AntdTable
+                        columns={getColumns([
+                          {key: 'Ticker', header: 'Ticker'},
+                          {key: 'Company', header: 'Company'},
+                          {key: 'price_change', header: 'Price Change %'},
+                          {key: 'Avg_Portfolio_Pct', header: 'Avg Portfolio %'},
+                          {key: 'Max_Portfolio_Pct', header: 'Max Portfolio %'},
+                          {key: 'Holder_Count', header: 'Holder Count'},
+                          {key: 'Delta', header: 'Delta'},
+                          {key: 'Total_Value', header: 'Total Value'}
+                        ], 'AVERAGE_PORTFOLIO')}
+                      dataSource={getSortedData(analysis.AVERAGE_PORTFOLIO,
+                          'AVERAGE_PORTFOLIO')}
                      rowKey={(record) => record.Ticker}
                      size="small"
                      pagination={false}
@@ -324,20 +334,21 @@ export default function QuarterAnalysis() {
            Consensus Sells
          </span>
        ),
-        children: analysis?.TOP_SELLS && analysis.TOP_SELLS.length > 0 && (
-            <div
-                className="overflow-x-auto -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
-              <AntdTable
-                  columns={getColumns([
-                    {key: 'Ticker', header: 'Ticker'},
-                    {key: 'Company', header: 'Company'},
-                    {key: 'Net_Buyers', header: 'Net Sellers'},
-                    {key: 'Seller_Count', header: 'Seller Count'},
-                    {key: 'Buyer_Count', header: 'Buyer Count'},
-                    {key: 'Delta', header: 'Delta'},
-                    {key: 'Total_Delta_Value', header: 'Total Delta Value'}
-                  ], 'TOP_SELLS')}
-                 dataSource={getSortedData(analysis.TOP_SELLS, 'TOP_SELLS')}
+         children: analysis?.TOP_SELLS && analysis.TOP_SELLS.length > 0 && (
+             <div
+                 className="overflow-x-auto -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+               <AntdTable
+                   columns={getColumns([
+                     {key: 'Ticker', header: 'Ticker'},
+                     {key: 'Company', header: 'Company'},
+                     {key: 'price_change', header: 'Price Change %'},
+                     {key: 'Net_Buyers', header: 'Net Sellers'},
+                     {key: 'Seller_Count', header: 'Seller Count'},
+                     {key: 'Buyer_Count', header: 'Buyer Count'},
+                     {key: 'Delta', header: 'Delta'},
+                     {key: 'Total_Delta_Value', header: 'Total Delta Value'}
+                   ], 'TOP_SELLS')}
+                  dataSource={getSortedData(analysis.TOP_SELLS, 'TOP_SELLS')}
                  rowKey={(record) => record.Ticker}
                  size="small"
                  pagination={false}
