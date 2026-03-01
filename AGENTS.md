@@ -201,8 +201,8 @@ function StockCard({ ticker, price }) {
 - Keep tests independent and focused
 - Use `setUp()` and `tearDown()` for test cleanup
 
-### Git Workflow
-- Create meaningful commit messages
-- Run tests before committing
-- Never commit secrets or API keys
-- Use feature branches for new functionality
+### Implementation Workflow
+- Create meaningful test plan and tests
+- Run tests after implemenation
+- Fix test errors in implemented feature
+- Review tests and implementation and fix related issues
