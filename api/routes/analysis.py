@@ -66,11 +66,11 @@ async def get_all_available_quarters():
 
 
 @router.get("/quarters/{quarter}", response_model=APIResponse)
-async def get_quarter_analysis(quarter: str):
+async def get_quarter_analysis(quarter: str, include_price_change: bool = True):
     """Get comprehensive quarter analysis."""
     try:
         logger.info(f"Getting quarter analysis for: {quarter}")
-        analysis = AnalysisService.get_quarter_analysis(quarter)
+        analysis = AnalysisService.get_quarter_analysis(quarter, include_price_change)
         if "error" in analysis:
             logger.error(f"Quarter analysis failed for {quarter}: {analysis['error']}")
             return APIResponse(

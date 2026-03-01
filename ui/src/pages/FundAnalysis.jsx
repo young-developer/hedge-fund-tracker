@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
 import { getAllFunds, getFundQuarters, getFundHoldings, getFundPerformance } from '../api/funds'
 import { getLastQuarter } from '../api/analysis'
+import { formatValue, formatPercentage, formatCurrency, formatDeltaValue, formatDeltaPercentage } from '../utils/format'
 import Card from '../components/Card'
 import LoadingSpinner from '../components/LoadingSpinner'
 import ErrorBoundary from '../components/ErrorBoundary'
-import { formatCurrency, formatPercentage } from '../services/api'
 import TickerLogo from '../components/TickerLogo'
 
 export default function FundAnalysis() {
@@ -121,33 +121,6 @@ export default function FundAnalysis() {
   const numPositions = (holdings.filter(h => h.VALUE > 0)).length
   const newPositions = (holdings.filter(h => h.DELTA && h.DELTA.includes('NEW'))).length
   const closePositions = (holdings.filter(h => h.DELTA === 'CLOSE')).length
-
-  const formatDeltaValue = (value) => {
-    if (!value) return '$0'
-    if (typeof value === 'number') {
-      return formatCurrency(value)
-    }
-    if (value.endsWith('M')) {
-      const num = parseFloat(value) * 1000000
-      return formatCurrency(num)
-    }
-    if (value.endsWith('K')) {
-      const num = parseFloat(value) * 1000
-      return formatCurrency(num)
-    }
-    return value
-  }
-
-  const formatDeltaPercentage = (value) => {
-    if (!value) return '0%'
-    if (typeof value === 'number') {
-      return formatPercentage(value, 2)
-    }
-    if (value.includes('%')) {
-      return value
-    }
-    return formatPercentage(parseFloat(value) || 0, 2)
-  }
 
   return (
     <ErrorBoundary>
@@ -402,10 +375,10 @@ export default function FundAnalysis() {
                           {holding.COMPANY}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm">
-                          {formatDeltaPercentage(holding.DELTA)}
+                          {formatPercentage(holding.DELTA)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm">
-                          {formatDeltaValue(holding.DELTA_VALUE)}
+                          {formatValue(holding.DELTA_VALUE)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm">
                           {formatCurrency(holding.VALUE)}
@@ -463,10 +436,10 @@ export default function FundAnalysis() {
                           {holding.COMPANY}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm">
-                          {formatDeltaPercentage(holding.DELTA)}
+                          {formatPercentage(holding.DELTA)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm">
-                          {formatDeltaValue(holding.DELTA_VALUE)}
+                          {formatValue(holding.DELTA_VALUE)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm">
                           {formatCurrency(holding.VALUE)}

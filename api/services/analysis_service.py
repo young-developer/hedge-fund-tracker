@@ -25,11 +25,12 @@ class AnalysisService:
         return get_all_quarters()
 
     @staticmethod
-    def get_quarter_analysis(quarter: str) -> dict[str, Any]:
+    def get_quarter_analysis(quarter: str, include_price_change: bool = True) -> dict[str, Any]:
         """Get comprehensive quarter analysis with all sections.
 
         Args:
             quarter (str): Quarter in 'YYYYQN' format.
+            include_price_change (bool): Whether to include price change data. Default is True.
 
         Returns:
             dict: Quarter analysis with all 5 sections matching print output.
@@ -59,24 +60,25 @@ class AnalysisService:
             average_portfolio = df[df['Holder_Count'] >= min_holder_threshold].sort_values(by='Avg_Portfolio_Pct', ascending=False).head(top_n)
             top_sells = df.sort_values(by=['Net_Buyers', 'Seller_Count', 'Total_Delta_Value'], ascending=True).head(top_n)
 
-            top_n_stocks = set(top_buys['Ticker'].tolist() + top_new_consensus['Ticker'].tolist() +
+            if include_price_change:
+                top_n_stocks = set(top_buys['Ticker'].tolist() + top_new_consensus['Ticker'].tolist() +
                              top_increasing_positions['Ticker'].tolist() + top_bets['Ticker'].tolist() +
                              average_portfolio['Ticker'].tolist() + top_sells['Ticker'].tolist())
 
-            for ticker in top_n_stocks:
-                try:
-                    price_change = AnalysisService.get_stock_price_change(ticker, quarter)
-                    if 'error' not in price_change:
-                        price_change_pct = price_change.get('price_change')
-                        for section in [top_buys, top_new_consensus, top_increasing_positions,
-                                      top_bets, average_portfolio, top_sells]:
-                            stock_mask = section['Ticker'] == ticker
-                            if stock_mask.any():
-                                section.loc[stock_mask, 'price_change'] = price_change_pct
-                                section.loc[stock_mask, 'current_price'] = price_change.get('current_price')
-                                section.loc[stock_mask, 'reported_price'] = price_change.get('reported_price')
-                except Exception:
-                    continue
+                for ticker in top_n_stocks:
+                    try:
+                        price_change = AnalysisService.get_stock_price_change(ticker, quarter)
+                        if 'error' not in price_change:
+                            price_change_pct = price_change.get('price_change')
+                            for section in [top_buys, top_new_consensus, top_increasing_positions,
+                                          top_bets, average_portfolio, top_sells]:
+                                stock_mask = section['Ticker'] == ticker
+                                if stock_mask.any():
+                                    section.loc[stock_mask, 'price_change'] = price_change_pct
+                                    section.loc[stock_mask, 'current_price'] = price_change.get('current_price')
+                                    section.loc[stock_mask, 'reported_price'] = price_change.get('reported_price')
+                    except Exception:
+                        continue
 
             return {
                 'QUARTER': quarter,

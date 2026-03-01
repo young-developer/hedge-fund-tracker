@@ -1,14 +1,14 @@
 import {useEffect, useState, useMemo} from 'react'
 import {searchStocks} from '../api/stocks'
 import {
-  getStockRecommendation,
+  getPortfolioFullData,
   getPortfolioFromStorage,
   addToPortfolio,
   removeFromPortfolio,
   isStockInPortfolio,
-  getStockHolders,
   getAllAvailableQuarters
 } from '../api/portfolio'
+import {formatNumber} from '../utils/format'
 import {Search, Plus, Trash2, ChevronDown, ChevronUp, TrendingUp, TrendingDown, DollarSign} from 'lucide-react'
 import Card from '../components/Card'
 import LoadingSpinner from '../components/LoadingSpinner'
@@ -19,14 +19,10 @@ export default function MyPortfolio() {
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState([])
   const [portfolio, setPortfolio] = useState([])
-  const [selectedStock, setSelectedStock] = useState(null)
-  const [selectedStockAnalysis, setSelectedStockAnalysis] = useState(null)
-  const [selectedStockHolders, setSelectedStockHolders] = useState([])
   const [portfolioAnalysis, setPortfolioAnalysis] = useState({})
   const [selectedQuarter, setSelectedQuarter] = useState('')
   const [quarters, setQuarters] = useState([])
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
   const [expandedStocks, setExpandedStocks] = useState(new Set())
   const [showAddModal, setShowAddModal] = useState(false)
   const [addedStock, setAddedStock] = useState(null)
@@ -35,7 +31,6 @@ export default function MyPortfolio() {
     async function fetchData() {
       try {
         setLoading(true)
-        setError('')
 
         const [portfolioData, allQuarters] = await Promise.all([
           getPortfolioFromStorage(),
@@ -61,10 +56,10 @@ export default function MyPortfolio() {
             await loadPortfolioAnalysis(quartersList[0], portfolioData)
           }
         } else {
-          setError('No quarters available in database')
+          console.error('No quarters available in database')
         }
       } catch (err) {
-        setError(err.message || 'Failed to load data')
+        console.error('Failed to load data:', err)
       } finally {
         setLoading(false)
       }
@@ -80,22 +75,21 @@ export default function MyPortfolio() {
 
     try {
       setLoading(true)
-      const analysisPromises = portfolioData.map(stock =>
-        getStockRecommendation(stock.ticker, quarter)
-      )
-
-      const analysisResults = await Promise.all(analysisPromises)
+      const tickers = portfolioData.map(stock => stock.ticker)
+      const fullData = await getPortfolioFullData(tickers.join(','), quarter)
 
       const analysisMap = {}
-      analysisResults.forEach((result, index) => {
-        if (result && !result.error) {
-          analysisMap[portfolioData[index].ticker] = result
-        }
-      })
+      if (fullData && Array.isArray(fullData)) {
+        fullData.forEach(item => {
+          if (item.ticker && item.recommendation) {
+            analysisMap[item.ticker] = item.recommendation
+          }
+        })
+      }
 
       setPortfolioAnalysis(analysisMap)
     } catch (err) {
-      setError(err.message || 'Failed to load stock data')
+      console.error('Failed to load stock data:', err)
     } finally {
       setLoading(false)
     }
@@ -113,7 +107,7 @@ export default function MyPortfolio() {
       const response = await searchStocks(query)
       setSearchResults(response.data || [])
     } catch (err) {
-      setError(err.message || 'Failed to search stocks')
+      console.error('Failed to search stocks:', err)
     } finally {
       setLoading(false)
     }
@@ -126,11 +120,11 @@ export default function MyPortfolio() {
 
   async function handleAddToPortfolio(ticker, company) {
     try {
-      const response = await getStockRecommendation(ticker, selectedQuarter)
-      const recommendation = response
+      const response = await getPortfolioFullData(ticker, selectedQuarter)
+      const recommendation = response && response[0] ? response[0].recommendation : null
 
-      if (recommendation.error) {
-        setError(`Failed to get recommendation for ${ticker}: ${recommendation.error}`)
+      if (!recommendation) {
+        console.error(`Failed to get recommendation for ${ticker}`)
         return
       }
 
@@ -142,7 +136,7 @@ export default function MyPortfolio() {
       })
       setShowAddModal(true)
     } catch (err) {
-      setError(err.message || 'Failed to get stock recommendation')
+      console.error('Failed to get stock recommendation:', err)
     }
   }
 
@@ -169,8 +163,6 @@ export default function MyPortfolio() {
   async function handleRemoveFromPortfolio(ticker) {
     removeFromPortfolio(ticker)
     setPortfolio(getPortfolioFromStorage())
-    setSelectedStock(null)
-    setSelectedStockAnalysis(null)
     setPortfolioAnalysis(prev => {
       const newAnalysis = { ...prev }
       delete newAnalysis[ticker]
@@ -196,26 +188,24 @@ export default function MyPortfolio() {
     }
 
     setLoading(true)
-    setError('')
     try {
       const portfolioData = getPortfolioFromStorage()
-      const analysisPromises = portfolioData.map(stock =>
-        getStockRecommendation(stock.ticker, newQuarter)
-      )
-
-      const analysisResults = await Promise.all(analysisPromises)
+      const tickers = portfolioData.map(stock => stock.ticker)
+      const fullData = await getPortfolioFullData(tickers.join(','), newQuarter)
 
       const analysisMap = {}
-      analysisResults.forEach((result, index) => {
-        if (result && !result.error) {
-          analysisMap[portfolioData[index].ticker] = result
-        }
-      })
+      if (fullData && Array.isArray(fullData)) {
+        fullData.forEach(item => {
+          if (item.ticker && item.recommendation) {
+            analysisMap[item.ticker] = item.recommendation
+          }
+        })
+      }
 
       console.log('Quarter change - updated analysis map:', analysisMap)
       setPortfolioAnalysis(analysisMap)
     } catch (err) {
-      setError(err.message || 'Failed to load stock data')
+      console.error('Failed to load stock data:', err)
     } finally {
       setLoading(false)
     }
@@ -238,19 +228,6 @@ export default function MyPortfolio() {
     if (deltaValue > 0) return <TrendingUp className="h-4 w-4 text-green-600" />
     if (deltaValue < 0) return <TrendingDown className="h-4 w-4 text-red-600" />
     return <DollarSign className="h-4 w-4 text-gray-600" />
-  }
-
-  function formatNumber(num) {
-    if (num === undefined || num === null || isNaN(num)) {
-      return '$0'
-    }
-    if (num >= 1_000_000) {
-      return `$${(num / 1_000_000).toFixed(2)}M`
-    }
-    if (num >= 1_000) {
-      return `$${(num / 1_000).toFixed(2)}K`
-    }
-    return `$${num.toFixed(2)}`
   }
 
   const portfolioWithAnalysis = useMemo(() => {
@@ -471,45 +448,11 @@ export default function MyPortfolio() {
                                         </p>
                                       </div>
                                     </div>
-                                    <div>
-                                      <p className="text-xs text-gray-500 mb-1">Reasoning</p>
-                                      <p className="text-sm text-gray-700">{stock.recommendation.reasoning}</p>
-                                    </div>
-                                    {selectedStockHolders && selectedStockHolders.length > 0 && (
-                                        <div>
-                                          <p className="text-xs text-gray-500 mb-2">Top 10 Holders</p>
-                                          <div className="overflow-x-auto">
-                                            <table className="min-w-full divide-y divide-gray-200">
-                                              <thead className="bg-gray-50">
-                                              <tr>
-                                                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Fund</th>
-                                                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Value</th>
-                                                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Delta</th>
-                                              </tr>
-                                              </thead>
-                                              <tbody className="bg-white divide-y divide-gray-200">
-                                              {selectedStockHolders
-                                                  .sort((a, b) => parseFloat(b.VALUE) - parseFloat(a.VALUE))
-                                                  .slice(0, 10)
-                                                  .map((holder, index) => (
-                                                      <tr key={index}>
-                                                        <td className="px-3 py-2 text-sm text-gray-900">{holder.FUND}</td>
-                                                        <td className="px-3 py-2 text-sm text-gray-900">${parseFloat(holder.VALUE).toLocaleString()}</td>
-                                                        <td className="px-3 py-2 text-sm font-medium">
-                                                          {holder.DELTA === 'NEW'
-                                                              ? <span className="text-green-600">NEW</span>
-                                                              : holder.DELTA === 'CLOSE'
-                                                                  ? <span className="text-red-600">CLOSE</span>
-                                                                  : holder.DELTA}
-                                                        </td>
-                                                      </tr>
-                                                  ))}
-                                              </tbody>
-                                            </table>
-                                          </div>
-                                        </div>
-                                    )}
-                                  </div>
+                                     <div>
+                                       <p className="text-xs text-gray-500 mb-1">Reasoning</p>
+                                       <p className="text-sm text-gray-700">{stock.recommendation.reasoning}</p>
+                                     </div>
+                                   </div>
                               ) : (
                                   <p className="text-sm text-gray-500">No analysis data available for this stock in the selected quarter</p>
                               )}

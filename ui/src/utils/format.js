@@ -58,8 +58,80 @@ export function formatNumber(value) {
   if (value === null || value === undefined || isNaN(value)) {
     return 'N/A';
   }
+  const isNegative = value < 0
+  const absoluteValue = Math.abs(value)
+  const formatted = (absoluteValue >= 1_000_000)
+    ? `$${(absoluteValue / 1_000_000).toFixed(2)}M`
+    : (absoluteValue >= 1_000)
+    ? `$${(absoluteValue / 1_000).toFixed(2)}K`
+    : `$${absoluteValue.toFixed(2)}`
 
-  return value.toLocaleString('en-US');
+  return isNegative ? `-${formatted}` : formatted
+}
+
+export function formatCurrency(value) {
+  if (value === null || value === undefined || isNaN(value)) {
+    return '0';
+  }
+
+  if (typeof value !== 'number') {
+    return String(value) || '0';
+  }
+
+  const absValue = Math.abs(value);
+  let formatted, label;
+
+  if (absValue >= 1e9) {
+    formatted = (value / 1e9).toFixed(2);
+    label = 'B';
+  } else if (absValue >= 1e6) {
+    formatted = (value / 1e6).toFixed(2);
+    label = 'M';
+  } else if (absValue >= 1e3) {
+    formatted = (value / 1e3).toFixed(2);
+    label = 'K';
+  } else if (absValue === 0) {
+    formatted = '0';
+    label = '';
+  } else {
+    formatted = value.toFixed(2);
+    label = '';
+  }
+
+  return `${formatted}${label}`;
+}
+
+export function formatDeltaValue(value) {
+  if (!value) return '$0'
+  if (typeof value === 'number') {
+    return formatCurrency(value)
+  }
+  if (typeof value === 'string') {
+    if (value.endsWith('M')) {
+      const num = parseFloat(value) * 1000000
+      return formatCurrency(num)
+    }
+    if (value.endsWith('K')) {
+      const num = parseFloat(value) * 1000
+      return formatCurrency(num)
+    }
+    return value
+  }
+  return '$0'
+}
+
+export function formatDeltaPercentage(value) {
+  if (!value) return '0%'
+  if (typeof value === 'number') {
+    return formatPercentage(value, 2)
+  }
+  if (typeof value === 'string') {
+    if (value.includes('%')) {
+      return value
+    }
+    return formatPercentage(parseFloat(value) || 0, 2)
+  }
+  return '0%'
 }
 
 export function formatTimestamp(timestamp) {

@@ -24,6 +24,7 @@ export default function QuarterAnalysis() {
   const [sortOrder, setSortOrder] = useState({})
   const [sortedData, setSortedData] = useState({})
   const [activeTab, setActiveTab] = useState('TOP_BUYS')
+  const [includePriceChange, setIncludePriceChange] = useState(false)
 
   const handleSort = (columnKey, sectionKey) => {
     setSortOrder((prev) => {
@@ -80,7 +81,7 @@ export default function QuarterAnalysis() {
   async function fetchAnalysis(quarter) {
     setLoading(true)
     try {
-      const {data} = await getQuarterAnalysis(quarter)
+      const {data} = await getQuarterAnalysis(quarter, includePriceChange)
       setAnalysis(data)
     } catch (error) {
       console.error('Error fetching analysis:', error)
@@ -90,46 +91,48 @@ export default function QuarterAnalysis() {
   }
 
   const getColumns = (customColumns, sectionKey) => {
-    return customColumns.map((col) => ({
-      title: col.header,
-      dataIndex: col.key,
-      key: col.key,
-      ellipsis: true,
-      sorter: (a, b) => {
-        const aValue = a[col.key]
-        const bValue = b[col.key]
-        if (aValue === null || aValue === undefined) {
-          return 1
-        }
-        if (bValue === null || bValue === undefined) {
-          return -1
-        }
-        if (typeof aValue === 'number' && typeof bValue === 'number') {
-          return aValue - bValue
-        }
-        return String(aValue).localeCompare(String(bValue), undefined,
-            {numeric: true})
-      },
-      render: (value, record) => {
-        if (col.key === 'Ticker') {
-          return <TickerLogo ticker={record.Ticker}/>
-        }
-        if (typeof value === 'number') {
-          if (col.key === 'Delta' || col.key === 'Avg_Portfolio_Pct' || col.key === 'Max_Portfolio_Pct') {
-            return formatPercentage(value)
+    return customColumns
+      .filter(col => !(col.key === 'price_change' && !includePriceChange))
+      .map((col) => ({
+        title: col.header,
+        dataIndex: col.key,
+        key: col.key,
+        ellipsis: true,
+        sorter: (a, b) => {
+          const aValue = a[col.key]
+          const bValue = b[col.key]
+          if (aValue === null || aValue === undefined) {
+            return 1
           }
-          if (col.key === 'Total_Delta_Value' || col.key === 'Total_Value' || col.key === 'Total_Delta_Value') {
-            return formatValue(value)
+          if (bValue === null || bValue === undefined) {
+            return -1
           }
-          if (col.key === 'price_change') {
-            const formatted = formatPercentage(value)
-            const colorClass = value > 0 ? 'text-green-600' : value < 0 ? 'text-red-600' : 'text-gray-600'
-            return <span className={colorClass}>{formatted}</span>
+          if (typeof aValue === 'number' && typeof bValue === 'number') {
+            return aValue - bValue
           }
-        }
-        return value
-      },
-    }))
+          return String(aValue).localeCompare(String(bValue), undefined,
+              {numeric: true})
+        },
+        render: (value, record) => {
+          if (col.key === 'Ticker') {
+            return <TickerLogo ticker={record.Ticker}/>
+          }
+          if (typeof value === 'number') {
+            if (col.key === 'Delta' || col.key === 'Avg_Portfolio_Pct' || col.key === 'Max_Portfolio_Pct') {
+              return formatPercentage(value)
+            }
+            if (col.key === 'Total_Delta_Value' || col.key === 'Total_Value' || col.key === 'Total_Delta_Value') {
+              return formatValue(value)
+            }
+            if (col.key === 'price_change') {
+              const formatted = formatPercentage(value)
+              const colorClass = value > 0 ? 'text-green-600' : value < 0 ? 'text-red-600' : 'text-gray-600'
+              return <span className={colorClass}>{formatted}</span>
+            }
+          }
+          return value
+        },
+      }))
   }
 
   const handleTabChange = (key) => {
@@ -405,6 +408,18 @@ export default function QuarterAnalysis() {
                 </p>
               </div>
           )}
+          <div className="mt-2 flex items-center">
+            <input
+                type="checkbox"
+                id="includePriceChange"
+                checked={includePriceChange}
+                onChange={(e) => setIncludePriceChange(e.target.checked)}
+                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+            />
+            <label htmlFor="includePriceChange" className="ml-2 text-sm text-gray-700">
+              Include Price Change Data
+            </label>
+          </div>
         </Card>
 
         {/* Run Analysis Button */}
