@@ -83,3 +83,8 @@ export const isStockInPortfolio = (ticker) => {
   const portfolio = getPortfolioFromStorage()
   return portfolio.some(s => s.ticker === ticker)
 }
+
+export const getStockSP500Status = async (ticker) => {
+  const response = await api.get(`/api/stocks/${ticker}/is-sp500-stock`)
+  return response.data || false
+}

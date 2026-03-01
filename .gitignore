@@ -4,3 +4,5 @@ __reports__
 .env
 .vscode
 gh-md-toc
+data
+.idea

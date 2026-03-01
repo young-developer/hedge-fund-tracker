@@ -33,6 +33,20 @@ cd ui
 npm run dev
 ```
 
+### Frontend Build & Lint
+```bash
+cd ui
+
+# Build for production
+npm run build
+
+# Run linter
+npm run lint
+
+# Run tests
+npm test
+```
+
 ## Code Style Guidelines
 
 ### Imports
@@ -133,12 +147,35 @@ class AIClient(ABC):
 - Use async functions for I/O operations
 - Include CORS middleware for frontend integration
 - Return appropriate HTTP status codes
+- Convert numpy types to Python native types for JSON serialization
 - Example:
 ```python
 @router.get("/stocks/{ticker}")
 async def get_stock(ticker: str) -> dict[str, Any]:
     """Get stock analysis for a specific ticker."""
     ...
+```
+
+### Frontend Development (ui/ folder)
+- Use React with Vite
+- Follow ESLint recommended rules for React
+- Use functional components and hooks
+- Use Tailwind CSS for styling
+- Use Recharts for data visualization
+- Use Ant Design (antd) for UI components
+- Use axios for API calls
+- Example:
+```jsx
+import React from 'react';
+import { Card } from 'antd';
+
+function StockCard({ ticker, price }) {
+  return (
+    <Card title={ticker}>
+      <p>Price: ${price}</p>
+    </Card>
+  );
+}
 ```
 
 ## Important Constraints
@@ -158,10 +195,11 @@ async def get_stock(ticker: str) -> dict[str, Any]:
 
 ### Testing
 - Follow the existing test structure in `tests/`
-- Use `unittest` framework
+- Use `unittest` framework for Python
 - Mock external dependencies (APIs, file I/O)
 - Test both success and error cases
 - Keep tests independent and focused
+- Use `setUp()` and `tearDown()` for test cleanup
 
 ### Git Workflow
 - Create meaningful commit messages

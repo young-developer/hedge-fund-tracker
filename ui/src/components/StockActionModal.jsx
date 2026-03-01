@@ -1,9 +1,29 @@
 import {X, TrendingUp, TrendingDown, DollarSign} from 'lucide-react'
 import {useNavigate} from 'react-router-dom'
+import {useState, useEffect} from 'react'
 import {getRecommendationColorClass} from '../utils/score-colors'
+import {getStockSP500Status} from '../api/portfolio'
 
 export default function StockActionModal({stock, recommendation, priceChange, onClose}) {
   const navigate = useNavigate()
+  const [sp500Status, setSp500Status] = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchSP500Status = async () => {
+      try {
+        const status = await getStockSP500Status(stock.ticker)
+        setSp500Status(status)
+      } catch (error) {
+        console.error('Error fetching SP500 status:', error)
+        setSp500Status(false)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchSP500Status()
+  }, [stock.ticker])
 
   const handleTradingView = () => {
     window.open(`https://www.tradingview.com/chart/?symbol=${stock.ticker}`, '_blank')
@@ -107,6 +127,17 @@ export default function StockActionModal({stock, recommendation, priceChange, on
                   <span>Current:</span>
                   <span>${priceChange.current_price.toFixed(2)}</span>
                 </div>
+              </div>
+            </div>
+        )}
+
+        {sp500Status !== null && !loading && (
+            <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-sm font-medium text-gray-700">S&P 500 Status</span>
+                <span className={`px-2 py-1 rounded-full text-xs font-medium border ${sp500Status ? 'bg-green-50 text-green-700 border-green-200' : 'bg-gray-100 text-gray-600 border-gray-200'}`}>
+                  {sp500Status ? 'Yes' : 'No'}
+                </span>
               </div>
             </div>
         )}

@@ -8,3 +8,5 @@ export const getStockCusips = (ticker) => api.get(`/api/stocks/${ticker}/cusips`
 export const getTopStocksByQuarter = (quarter, limit) => api.get(`/api/stocks/top/${quarter}`, { params: { limit } })
 export const getRisingStocks = (quarter, limit) => api.get(`/api/stocks/rising/${quarter}`, { params: { limit } })
 export const getStockQuarterData = (ticker, quarter) => api.get(`/api/stocks/${ticker}/data/${quarter}`)
+export const getStockPriceHistory = (ticker, limit = 365) => api.get(`/api/stocks/${ticker}/price-history`, { params: { limit } })
+export const getStockFundamentals = (ticker, quarter = null) => api.get(`/api/stocks/${ticker}/fundamentals`, { params: { quarter } })

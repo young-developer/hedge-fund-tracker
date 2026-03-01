@@ -100,3 +100,73 @@ async def get_all_stocks():
             error=str(e),
             message="Failed to retrieve stocks"
         )
+
+
+@router.get("/{ticker}/price-history", response_model=APIResponse)
+async def get_stock_price_history(ticker: str, limit: int = 365):
+    """Get price history for a stock ticker."""
+    try:
+        price_history = StockService.get_price_history(ticker.upper(), limit)
+
+        if not price_history:
+            return APIResponse(
+                success=False,
+                error=f"No price history found for {ticker.upper()}",
+                message="No data available"
+            )
+
+        return APIResponse(
+            success=True,
+            data=price_history,
+            message=f"Retrieved {len(price_history)} price points for {ticker.upper()}"
+        )
+    except Exception as e:
+        return APIResponse(
+            success=False,
+            error=str(e),
+            message="Failed to retrieve price history"
+        )
+
+
+@router.get("/{ticker}/fundamentals", response_model=APIResponse)
+async def get_stock_fundamentals(ticker: str, quarter: str | None = None):
+    """Get fundamentals data for a stock."""
+    try:
+        fundamentals = StockService.get_fundamentals(ticker.upper(), quarter)
+
+        if "error" in fundamentals:
+            return APIResponse(
+                success=False,
+                error=fundamentals["error"],
+                message="No data available"
+            )
+
+        return APIResponse(
+            success=True,
+            data=fundamentals,
+            message=f"Retrieved fundamentals for {ticker.upper()}"
+        )
+    except Exception as e:
+        return APIResponse(
+            success=False,
+            error=str(e),
+            message="Failed to retrieve fundamentals"
+        )
+
+
+@router.get("/{ticker}/is-sp500-stock", response_model=APIResponse)
+async def get_stock_sp500_status(ticker: str):
+    """Check if a stock ticker is in the S&P 500."""
+    try:
+        is_sp500 = StockService.is_sp500_stock(ticker.upper())
+        return APIResponse(
+            success=True,
+            data=is_sp500,
+            message=f"{ticker.upper()} is in S&P 500: {is_sp500}"
+        )
+    except Exception as e:
+        return APIResponse(
+            success=False,
+            error=str(e),
+            message="Failed to check S&P 500 status"
+        )
