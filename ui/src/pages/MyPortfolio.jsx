@@ -88,8 +88,8 @@ export default function MyPortfolio() {
 
       const analysisMap = {}
       analysisResults.forEach((result, index) => {
-        if (result && result.data && !result.data.error) {
-          analysisMap[portfolioData[index].ticker] = result.data
+        if (result && !result.error) {
+          analysisMap[portfolioData[index].ticker] = result
         }
       })
 
@@ -127,7 +127,7 @@ export default function MyPortfolio() {
   async function handleAddToPortfolio(ticker, company) {
     try {
       const response = await getStockRecommendation(ticker, selectedQuarter)
-      const recommendation = response.data || response
+      const recommendation = response
 
       if (recommendation.error) {
         setError(`Failed to get recommendation for ${ticker}: ${recommendation.error}`)
@@ -207,9 +207,8 @@ export default function MyPortfolio() {
 
       const analysisMap = {}
       analysisResults.forEach((result, index) => {
-        const recommendation = result.data || result
-        if (recommendation && !recommendation.error) {
-          analysisMap[portfolioData[index].ticker] = recommendation
+        if (result && !result.error) {
+          analysisMap[portfolioData[index].ticker] = result
         }
       })
 
@@ -268,7 +267,7 @@ export default function MyPortfolio() {
     })
   }, [portfolio, portfolioAnalysis])
 
-  if (loading && portfolio.length === 0) {
+  if (loading) {
     return (
         <ErrorBoundary>
           <LoadingSpinner message="Loading portfolio..."/>
