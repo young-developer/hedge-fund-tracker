@@ -17,6 +17,7 @@ services:
     volumes:
       - ./database:/app/database
       - ./__reports__:/app/__reports__
+      - ./__llmcache__:/app/__llmcache__
     networks:
       - hedge-fund-network
     healthcheck:
