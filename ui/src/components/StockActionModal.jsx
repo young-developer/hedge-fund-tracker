@@ -159,13 +159,15 @@ export default function StockActionModal({stock, recommendation, priceChange, on
         )}
 
         <div className="space-y-3">
-          <button
-            onClick={handleAddToWatchlist}
-            className="w-full flex items-center gap-3 px-4 py-3 bg-green-50 hover:bg-green-100 text-green-700 rounded-lg transition-colors"
-          >
-            <Plus className="h-5 w-5" />
-            <span className="font-medium">Add to Watchlist</span>
-          </button>
+          {!recommendation && (
+              <button
+                onClick={handleAddToWatchlist}
+                className="w-full flex items-center gap-3 px-4 py-3 bg-green-50 hover:bg-green-100 text-green-700 rounded-lg transition-colors"
+              >
+                <Plus className="h-5 w-5" />
+                <span className="font-medium">Add to Watchlist</span>
+              </button>
+          )}
           <button
             onClick={handleTradingView}
             className="w-full flex items-center gap-3 px-4 py-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg transition-colors"
