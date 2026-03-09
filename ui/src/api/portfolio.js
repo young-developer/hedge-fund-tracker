@@ -60,17 +60,43 @@ export const savePortfolioToStorage = (portfolio) => {
   }
 }
 
-export const addToPortfolio = (stock) => {
+export const addToPortfolio = (stock, categoryId = 'my') => {
   const portfolio = getPortfolioFromStorage()
   const existingIndex = portfolio.findIndex(s => s.ticker === stock.ticker)
 
+  const stockData = {
+    ...stock,
+    categoryId,
+    addedAt: new Date().toISOString()
+  }
+
   if (existingIndex !== -1) {
-    portfolio[existingIndex] = { ...portfolio[existingIndex], ...stock, addedAt: new Date().toISOString() }
+    portfolio[existingIndex] = { ...portfolio[existingIndex], ...stockData }
   } else {
-    portfolio.push({ ...stock, addedAt: new Date().toISOString() })
+    portfolio.push(stockData)
   }
 
   return savePortfolioToStorage(portfolio)
+}
+
+export const updateStockCategory = (ticker, categoryId) => {
+  const portfolio = getPortfolioFromStorage()
+  const index = portfolio.findIndex(s => s.ticker === ticker)
+
+  if (index === -1) {
+    return false
+  }
+
+  portfolio[index] = { ...portfolio[index], categoryId }
+  return savePortfolioToStorage(portfolio)
+}
+
+export const getStocksByCategory = (categoryId) => {
+  const portfolio = getPortfolioFromStorage()
+  return portfolio.filter(s => {
+    const stockCategory = s.categoryId || 'my'
+    return stockCategory === categoryId
+  })
 }
 
 export const removeFromPortfolio = (ticker) => {

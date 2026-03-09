@@ -12,12 +12,14 @@ import TickerLogo from '../components/TickerLogo'
 import AIReportTile from '../components/AIReportTile'
 import PortfolioTile from '../components/PortfolioTile'
 import LoadingSpinner from '../components/LoadingSpinner'
+import CategoryFilter from '../components/CategoryFilter'
 import {getTileColor} from '../utils/score-colors'
 import {formatTimestamp} from '../utils/format'
-import {useDashboard} from '../contexts'
+import {useDashboard, useCategories} from '../contexts'
 
 export default function Home() {
   const {updateQuarters, updateRecentFilings} = useDashboard()
+  const {categories, selectedCategory, selectCategory, getStocksByCategory} = useCategories()
   const [quarters, setQuarters] = useState([])
   const [filings, setFilings] = useState([])
   const [aiReports, setAiReports] = useState([])
@@ -69,9 +71,10 @@ export default function Home() {
         updateQuarters(quartersData.data)
         updateRecentFilings(filingsData)
 
-        // Load portfolio
+        // Load portfolio and set default category
         const portfolioData = getPortfolioFromStorage()
         setPortfolio(portfolioData)
+        selectCategory('my')
 
         // Load portfolio data for latest quarter
         const latestQuarter = quartersData.data?.[0]
@@ -153,42 +156,61 @@ export default function Home() {
       <div className="space-y-6 sm:space-y-8">
         {/* My Portfolio */}
         {portfolio.length > 0 && (
-            <div className="card">
-              <div className="flex items-center gap-2 mb-3 sm:mb-4">
-                <div className="p-2 bg-green-100 rounded-lg">
-                  <Brain className="h-5 w-5 sm:h-6 sm:w-6 text-green-600"/>
-                </div>
-                <div className="flex-1">
-                  <h2 className="text-lg sm:text-xl font-semibold">My
-                    Portfolio</h2>
-                  <p className="text-xs sm:text-sm text-gray-500">
-                    {portfolio.length} stocks • Latest quarter analysis
-                  </p>
-                </div>
-              </div>
+           <div className="card">
+               <div className="flex items-center gap-2 mb-3 sm:mb-4">
+                 <div className="p-2 bg-green-100 rounded-lg">
+                   <Brain className="h-5 w-5 sm:h-6 sm:w-6 text-green-600"/>
+                 </div>
+                 <div className="flex-1">
+                   <h2 className="text-lg sm:text-xl font-semibold">My
+                     Portfolio</h2>
+                   <p className="text-xs sm:text-sm text-gray-500">
+                     {portfolio.length} stocks • Latest quarter analysis
+                   </p>
+                 </div>
+               </div>
 
-              {portfolioLoading && (
-                  <LoadingSpinner message="Loading portfolio analysis..."/>
-              )}
+               <CategoryFilter
+                 categories={categories}
+                 selectedCategory={selectedCategory}
+                 onSelectCategory={selectCategory}
+                 portfolio={portfolio}
+               />
+
+               {portfolioLoading && (
+                   <LoadingSpinner message="Loading portfolio analysis..."/>
+               )}
 
                {!portfolioLoading && (
-                   <div
-                       className="grid grid-cols-2 sm:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-1 sm:gap-2">
-                     {portfolio
-                       .sort((a, b) => {
-                         const deltaA = portfolioPriceChanges[a.ticker]?.price_change || 0
-                         const deltaB = portfolioPriceChanges[b.ticker]?.price_change || 0
-                         return deltaB - deltaA
-                       })
-                       .map((stock) => {
-                       return (
-                           <PortfolioTile key={stock.ticker} stock={stock}
-                                          analysis={portfolioAnalysis}
-                                          priceChange={portfolioPriceChanges[stock.ticker]}/>
-                       )
-                     })}
-                   </div>
-               )}
+                    <>
+                      {(() => {
+                        const filteredPortfolio = selectedCategory === 'all'
+                          ? portfolio
+                          : getStocksByCategory(portfolio, selectedCategory)
+                        
+                        return (
+                        <div
+                            className="grid grid-cols-2 sm:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-1 sm:gap-2">
+                          {filteredPortfolio.length > 0 ? (
+                            filteredPortfolio
+                              .sort((a, b) => {
+                                const deltaA = portfolioPriceChanges[a.ticker]?.price_change || 0
+                                const deltaB = portfolioPriceChanges[b.ticker]?.price_change || 0
+                                return deltaB - deltaA
+                              })
+                              .map((stock) => (
+                                <PortfolioTile key={stock.ticker} stock={stock}
+                                               analysis={portfolioAnalysis}
+                                               priceChange={portfolioPriceChanges[stock.ticker]}/>
+                              ))
+                          ) : (
+                            <p className="col-span-full text-center text-gray-500 py-8">No stocks in this category</p>
+                          )}
+                        </div>
+                        )
+                      })()}
+                    </>
+                )}
 
               <div className="mt-3 sm:mt-4 text-center">
                 <a
@@ -337,7 +359,24 @@ export default function Home() {
                           {filing.COMPANY}
                         </td>
                         <td className="px-3 sm:px-4 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm">
-                          {filing.DELTA}
+                          <div className="flex flex-col items-end gap-1">
+                            <span className={`text-xs font-semibold px-2 py-1 rounded-full ${
+                              (filing.DELTA || '').includes('NEW') ? 'bg-green-100 text-green-800' :
+                              (filing.DELTA || '').includes('CLOSE') ? 'bg-red-100 text-red-800' :
+                              (filing.DELTA || '').includes('+') ? 'bg-green-100 text-green-800' :
+                              'bg-red-100 text-red-800'
+                            }`}>
+                              {filing.DELTA || '-'}
+                            </span>
+                            <span className={`text-[10px] px-2 py-0.5 rounded ${
+                              (filing.DELTA || '').includes('NEW') ? 'bg-green-200 text-green-800' :
+                              (filing.DELTA || '').includes('CLOSE') ? 'bg-red-200 text-red-800' :
+                              (filing.DELTA || '').includes('+') ? 'bg-green-200 text-green-800' :
+                              'bg-red-200 text-red-800'
+                            }`}>
+                              {(filing.DELTA || '').includes('NEW') || (filing.DELTA || '').includes('+') ? 'Buy' : 'Sell'}
+                            </span>
+                          </div>
                         </td>
                       </tr>
                   ))}

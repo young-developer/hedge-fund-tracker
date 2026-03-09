@@ -1,21 +1,25 @@
 import {useEffect, useState, useMemo} from 'react'
 import {searchStocks} from '../api/stocks'
 import {
-  getPortfolioFullData,
   getPortfolioFromStorage,
   addToPortfolio,
   removeFromPortfolio,
+  getAllAvailableQuarters,
+  getPortfolioFullData,
   isStockInPortfolio,
-  getAllAvailableQuarters
 } from '../api/portfolio'
 import {formatNumber} from '../utils/format'
-import {Search, Plus, Trash2, ChevronDown, ChevronUp, TrendingUp, TrendingDown, DollarSign} from 'lucide-react'
+import {Search, Plus, Trash2, ChevronDown, ChevronUp, TrendingUp, TrendingDown, DollarSign, Settings2} from 'lucide-react'
 import Card from '../components/Card'
 import LoadingSpinner from '../components/LoadingSpinner'
 import ErrorBoundary from '../components/ErrorBoundary'
 import TickerLogo from '../components/TickerLogo'
+import CategoryFilter from '../components/CategoryFilter'
+import CategoryManagerModal from '../components/CategoryManagerModal'
+import {useCategories} from '../contexts/CategoryContext'
 
 export default function MyPortfolio() {
+  const {selectedCategory, categories} = useCategories()
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState([])
   const [portfolio, setPortfolio] = useState([])
@@ -26,6 +30,8 @@ export default function MyPortfolio() {
   const [expandedStocks, setExpandedStocks] = useState(new Set())
   const [showAddModal, setShowAddModal] = useState(false)
   const [addedStock, setAddedStock] = useState(null)
+  const [showCategoryManager, setShowCategoryManager] = useState(false)
+  const [selectedAddCategory, setSelectedAddCategory] = useState('my')
 
   useEffect(() => {
     async function fetchData() {
@@ -121,11 +127,10 @@ export default function MyPortfolio() {
   async function handleAddToPortfolio(ticker, company) {
     try {
       const response = await getPortfolioFullData(ticker, selectedQuarter)
-      const recommendation = response && response[0] ? response[0].recommendation : null
-
-      if (!recommendation) {
-        console.error(`Failed to get recommendation for ${ticker}`)
-        return
+      const recommendation = response && response[0] ? response[0].recommendation : {
+        label: 'N/A',
+        confidence: 0,
+        reasoning: 'No data available for this quarter'
       }
 
       setAddedStock({
@@ -137,6 +142,17 @@ export default function MyPortfolio() {
       setShowAddModal(true)
     } catch (err) {
       console.error('Failed to get stock recommendation:', err)
+      setAddedStock({
+        ticker,
+        company,
+        cusip: searchResults.find(s => s.Ticker === ticker)?.CUSIP,
+        recommendation: {
+          label: 'N/A',
+          confidence: 0,
+          reasoning: 'Error fetching data'
+        }
+      })
+      setShowAddModal(true)
     }
   }
 
@@ -146,7 +162,7 @@ export default function MyPortfolio() {
         ticker: addedStock.ticker,
         company: addedStock.company,
         cusip: addedStock.cusip
-      })
+      }, selectedAddCategory)
       setShowAddModal(false)
       setAddedStock(null)
       setPortfolio(getPortfolioFromStorage())
@@ -235,14 +251,19 @@ export default function MyPortfolio() {
       return []
     }
 
-    return portfolio.map((stock) => {
+    const filtered = portfolio.filter(stock => {
+      const stockCategory = stock.categoryId || 'my'
+      return stockCategory === selectedCategory
+    })
+
+    return filtered.map((stock) => {
       const analysis = portfolioAnalysis[stock.ticker]
       return {
         ...stock,
         recommendation: analysis || { label: 'N/A', confidence: 0, reasoning: 'No data' }
       }
     })
-  }, [portfolio, portfolioAnalysis])
+  }, [portfolio, portfolioAnalysis, selectedCategory])
 
   if (loading) {
     return (
@@ -256,37 +277,50 @@ export default function MyPortfolio() {
       <ErrorBoundary>
         <div className="space-y-6">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">My Portfolio</h2>
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-2xl font-bold text-gray-900">My Portfolio</h2>
+              <button
+                  onClick={() => setShowCategoryManager(true)}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
+              >
+                <Settings2 className="h-4 w-4"/>
+                Manage Categories
+              </button>
+            </div>
             <p className="mt-2 text-gray-600">Manage your stocks and track institutional activity</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card>
-              <div className="text-sm text-gray-500">Total Stocks</div>
-              <div className="text-2xl font-bold text-gray-900">{portfolio.length}</div>
-            </Card>
-            <Card>
-              <div className="text-sm text-gray-500">Selected Quarter</div>
-              <select
-                  value={selectedQuarter}
-                  onChange={(e) => handleQuarterChange(e.target.value)}
-                  disabled={loading}
-                  className="w-full mt-1 border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
-              >
-                {quarters.map((quarter) => (
-                    <option key={quarter} value={quarter}>
-                      {quarter}
-                    </option>
-                ))}
-              </select>
-            </Card>
-            <Card>
-              <div className="text-sm text-gray-500">Stocks with Recommendations</div>
-              <div className="text-2xl font-bold text-gray-900">
-                {portfolioWithAnalysis.filter(s => s.recommendation.label !== 'N/A').length}
-              </div>
-            </Card>
-          </div>
+          <Card>
+            <CategoryFilter onManageClick={() => setShowCategoryManager(true)}/>
+          </Card>
+
+<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+             <Card>
+               <div className="text-sm text-gray-500">Stocks in {categories.find(c => c.id === selectedCategory)?.name || 'Category'}</div>
+               <div className="text-2xl font-bold text-gray-900">{portfolioWithAnalysis.length}</div>
+             </Card>
+             <Card>
+               <div className="text-sm text-gray-500">Selected Quarter</div>
+               <select
+                   value={selectedQuarter}
+                   onChange={(e) => handleQuarterChange(e.target.value)}
+                   disabled={loading}
+                   className="w-full mt-1 border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+               >
+                 {quarters.map((quarter) => (
+                     <option key={quarter} value={quarter}>
+                       {quarter}
+                     </option>
+                 ))}
+               </select>
+             </Card>
+             <Card>
+               <div className="text-sm text-gray-500">Stocks with Recommendations</div>
+               <div className="text-2xl font-bold text-gray-900">
+                 {portfolioWithAnalysis.filter(s => s.recommendation.label !== 'N/A').length}
+               </div>
+             </Card>
+           </div>
 
           <Card>
             <h3 className="text-lg font-semibold mb-4">Add Stock to Portfolio</h3>
@@ -473,56 +507,74 @@ export default function MyPortfolio() {
               </Card>
           )}
 
-          {showAddModal && addedStock && (
-              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-                  <h3 className="text-lg font-semibold mb-4">Add {addedStock.ticker} to Portfolio</h3>
-                  <div className="space-y-3">
-                    <div>
-                      <p className="text-sm text-gray-500">Company</p>
-                      <p className="font-semibold">{addedStock.company}</p>
-                    </div>
-                    {addedStock.recommendation.error ? (
-                        <p className="text-sm text-red-600">{addedStock.recommendation.error}</p>
-                    ) : (
-                        <>
-                          <div>
-                            <p className="text-sm text-gray-500">Recommendation</p>
-                            <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                                getRecommendationColor(addedStock.recommendation.label)
-                            }`}>
-                              {addedStock.recommendation.label}
-                            </span>
-                          </div>
-                            <div>
-                              <p className="text-sm text-gray-500">Confidence</p>
-                              <p className="font-semibold">{Math.round(addedStock.recommendation.confidence * 100)}%</p>
-                            </div>
-                          <div>
-                            <p className="text-sm text-gray-500">Reasoning</p>
-                            <p className="text-sm text-gray-700">{addedStock.recommendation.reasoning}</p>
-                          </div>
-                        </>
-                    )}
-                  </div>
-                  <div className="flex gap-3 mt-6">
-                    <button
-                        onClick={() => setShowAddModal(false)}
-                        className="flex-1 border border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                        onClick={handleConfirmAdd}
-                        disabled={addedStock.recommendation.error}
-                        className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
-                    >
-                      Add to Portfolio
-                    </button>
-                  </div>
-                </div>
-              </div>
-          )}
+{showAddModal && addedStock && (
+               <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                 <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+                   <h3 className="text-lg font-semibold mb-4">Add {addedStock.ticker} to Portfolio</h3>
+                   <div className="space-y-3">
+                     <div>
+                       <p className="text-sm text-gray-500">Company</p>
+                       <p className="font-semibold">{addedStock.company}</p>
+                     </div>
+                     {addedStock.recommendation.error ? (
+                         <p className="text-sm text-red-600">{addedStock.recommendation.error}</p>
+                     ) : (
+                         <>
+                           <div>
+                             <p className="text-sm text-gray-500">Recommendation</p>
+                             <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                                 getRecommendationColor(addedStock.recommendation.label)
+                             }`}>
+                               {addedStock.recommendation.label}
+                             </span>
+                           </div>
+                             <div>
+                               <p className="text-sm text-gray-500">Confidence</p>
+                               <p className="font-semibold">{Math.round(addedStock.recommendation.confidence * 100)}%</p>
+                             </div>
+                           <div>
+                             <p className="text-sm text-gray-500">Reasoning</p>
+                             <p className="text-sm text-gray-700">{addedStock.recommendation.reasoning}</p>
+                           </div>
+                         </>
+                     )}
+                     <div>
+                       <p className="text-sm text-gray-500">Category</p>
+                       <select
+                           value={selectedAddCategory}
+                           onChange={(e) => setSelectedAddCategory(e.target.value)}
+                           className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mt-1"
+                       >
+                         {categories.map((category) => (
+                             <option key={category.id} value={category.id}>
+                               {category.name}
+                             </option>
+                         ))}
+                       </select>
+                     </div>
+                   </div>
+                   <div className="flex gap-3 mt-6">
+                     <button
+                         onClick={() => setShowAddModal(false)}
+                         className="flex-1 border border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors"
+                     >
+                       Cancel
+                     </button>
+                     <button
+                         onClick={handleConfirmAdd}
+                         disabled={addedStock.recommendation.error}
+                         className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                     >
+                       Add to Portfolio
+                     </button>
+                   </div>
+                 </div>
+               </div>
+           )}
+
+           {showCategoryManager && (
+               <CategoryManagerModal onClose={() => setShowCategoryManager(false)}/>
+           )}
         </div>
       </ErrorBoundary>
   )
